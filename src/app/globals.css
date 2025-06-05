@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 95%; /* Soft Grey - Background */
+    --foreground: 240 10% 10%; /* Darker grey for text */
+    
+    --card: 0 0% 100%; /* White for cards */
+    --card-foreground: 240 10% 10%;
+    
+    --popover: 0 0% 100%; /* White for popovers */
+    --popover-foreground: 240 10% 10%;
+    
+    --primary: 174 44% 60%; /* Teal #4DB6AC from PRD */
+    --primary-foreground: 0 0% 100%; /* White text on Teal */
+    
+    --secondary: 0 0% 88%; /* Soft Grey #E0E0E0 from PRD */
+    --secondary-foreground: 240 10% 20%; /* Darker text on light grey */
+    
+    --muted: 220 15% 90%; /* Slightly bluish muted grey */
+    --muted-foreground: 220 10% 45%; /* Muted text */
+    
+    --accent: 16 100% 63%; /* Bright Orange #FF7043 from PRD */
+    --accent-foreground: 0 0% 100%; /* White text on Orange for good contrast */
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 220 20% 85%; /* Lighter grey border */
+    --input: 220 20% 85%; /* Lighter grey input border */
+    --ring: 174 44% 50%; /* Teal for ring, slightly darker for focus */
+    
+    --chart-1: 174 44% 55%; /* Variations of Teal */
+    --chart-2: 174 35% 65%;
+    --chart-3: 16 100% 55%; /* Variations of Orange */
+    --chart-4: 16 80% 70%;
+    --chart-5: 0 0% 60%;   /* A neutral grey */
+    
+    --radius: 0.5rem; /* Default rounded corners */
+
+    /* Sidebar specific colors - adjusted to complement new theme */
+    --sidebar-background: 240 4% 18%; /* Darker Grey for sidebar background */
+    --sidebar-foreground: 0 0% 85%; /* Light grey text for dark sidebar */
+    --sidebar-primary: 174 44% 70%; /* Lighter Teal for sidebar accents */
+    --sidebar-primary-foreground: 0 0% 5%; /* Dark text for sidebar primary elements */
+    --sidebar-accent: 174 44% 25%; /* Darker Teal or a contrasting accent for sidebar hover */
+    --sidebar-accent-foreground: 0 0% 95%; /* Light text on sidebar accent hover */
+    --sidebar-border: 240 4% 22%; /* Border color for sidebar elements */
+    --sidebar-ring: 174 44% 65%; /* Ring color for focus states within sidebar */
+  }
+
+  .dark {
+    --background: 240 6% 10%; /* Dark Grey background */
+    --foreground: 0 0% 90%; /* Light grey text */
+    --card: 240 5% 15%; /* Slightly lighter dark grey for cards */
+    --card-foreground: 0 0% 90%;
+    --popover: 240 5% 15%;
+    --popover-foreground: 0 0% 90%;
+    
+    --primary: 174 50% 55%; /* Teal, slightly adjusted for dark mode contrast */
+    --primary-foreground: 0 0% 10%; /* Darker text on primary for dark mode */
+    
+    --secondary: 0 0% 25%; /* Darker Soft Grey for secondary elements */
+    --secondary-foreground: 0 0% 90%;
+    
+    --muted: 240 5% 20%;
+    --muted-foreground: 0 0% 60%;
+    
+    --accent: 16 100% 58%; /* Bright Orange, slightly adjusted for dark mode */
+    --accent-foreground: 0 0% 10%; /* Dark text on accent for dark mode */
+    
+    --destructive: 0 70% 45%; /* Darker destructive red */
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 5% 25%; 
+    --input: 240 5% 30%; 
+    --ring: 174 50% 50%; /* Teal for ring in dark mode */
+
+    /* Chart colors for dark mode */
+    --chart-1: 174 50% 50%;
+    --chart-2: 174 40% 60%;
+    --chart-3: 16 100% 50%;
+    --chart-4: 16 85% 65%;
+    --chart-5: 0 0% 70%;
+
+    /* Dark Sidebar specific colors */
+    --sidebar-background: 240 5% 12%; 
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 174 50% 65%; 
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 174 50% 20%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 240 5% 18%;
+    --sidebar-ring: 174 50% 60%;
+  }
+
+  /* Moved global styles into the single @layer base block */
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
