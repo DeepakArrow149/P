@@ -29,8 +29,7 @@ export async function GET(
   try {
     const { id } = await params;
     const lineGroupId = parseInt(id, 10);
-    
-    if (isNaN(lineGroupId)) {
+      if (isNaN(lineGroupId)) {
       return NextResponse.json(
         {
           success: false,
@@ -39,10 +38,9 @@ export async function GET(
         { status: 400 }
       );
     }
-      // Get line group from database
+
+    // Get line group from database
     const lineGroup = await lineGroupRepository.getLineGroupById(lineGroupId);
-      dataSource = 'mock';
-    }
 
     if (!lineGroup) {
       return NextResponse.json(
@@ -57,7 +55,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: lineGroup,
-      dataSource,
+      source: 'database',
     });
   } catch (error) {
     console.error('Error fetching line group:', error);
@@ -91,26 +89,16 @@ export async function PUT(
         { status: 400 }
       );
     }
-    
-    const body = await request.json();
+      const body = await request.json();
     const validatedData = updateLineGroupSchema.parse(body);
     
-    // Try database first, fall back to persistent mock service
-    let updatedLineGroup;
-    let dataSource = 'database';
-    
-    try {
-      updatedLineGroup = await lineGroupRepository.updateLineGroup(lineGroupId, validatedData);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      updatedLineGroup = await persistentMockLineGroupService.updateLineGroup(lineGroupId, validatedData);
-      dataSource = 'mock';
-    }
+    // Update line group in database
+    const updatedLineGroup = await lineGroupRepository.updateLineGroup(lineGroupId, validatedData);
 
     return NextResponse.json({
       success: true,
       data: updatedLineGroup,
-      dataSource,
+      source: 'database',
       message: 'Line group updated successfully',
     });
   } catch (error) {
@@ -176,22 +164,17 @@ export async function DELETE(
           error: 'Invalid line group ID',
         },
         { status: 400 }
-      );
-    }
-    
-    // Try database first, fall back to persistent mock service
-    let success;
-    let dataSource = 'database';
-    
+      );    }
+      // Delete line group from database
     try {
-      success = await lineGroupRepository.deleteLineGroup(lineGroupId);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      success = await persistentMockLineGroupService.deleteLineGroup(lineGroupId);
-      dataSource = 'mock';
-    }
-
-    if (!success) {
+      await lineGroupRepository.deleteLineGroup(lineGroupId);
+      
+      return NextResponse.json({
+        success: true,
+        source: 'database',
+        message: 'Line group deleted successfully',
+      });
+    } catch (error) {
       return NextResponse.json(
         {
           success: false,
@@ -200,12 +183,6 @@ export async function DELETE(
         { status: 404 }
       );
     }
-
-    return NextResponse.json({
-      success: true,
-      dataSource,
-      message: 'Line group deleted successfully',
-    });
   } catch (error) {
     console.error('Error deleting line group:', error);
 

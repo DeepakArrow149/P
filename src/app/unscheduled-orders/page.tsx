@@ -15,16 +15,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-// Assuming mockLinesData and mockUnitsData are correctly structured and available for dropdowns.
-// If these are to be fetched from Firebase, that logic would need to be added.
-import { mockLinesData, mockUnitsData } from '@/lib/mockData'; 
+import { useLineApi } from '@/hooks/useLineApi';
+import { useLineGroupApi } from '@/hooks/useLineGroupApi';
 import { getUnscheduledOrders, updateOrderStatus, type StoredOrder } from '@/lib/orderService'; // Import MySQL-based services
 import { format, parseISO } from 'date-fns';
 import type { UnscheduledOrder as PlanViewUnscheduledOrder } from '@/components/plan-view/types';
-
-
-const unitsForSelect = mockUnitsData.map(u => ({ id: u.id, name: u.unitName }));
-const linesForSelect = mockLinesData.map(l => ({ id: l.id, unitId: l.unitId, name: l.lineName }));
 
 
 const scheduleOrderFormSchema = z.object({
@@ -37,10 +32,28 @@ type ScheduleOrderFormValues = z.infer<typeof scheduleOrderFormSchema>;
 export default function UnscheduledOrdersPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { lines, searchLines } = useLineApi();
+  const { lineGroups, searchLineGroups } = useLineGroupApi();
   const [isSchedulingDialogOpen, setIsSchedulingDialogOpen] = React.useState(false);
   const [selectedOrderForScheduling, setSelectedOrderForScheduling] = React.useState<PlanViewUnscheduledOrder | null>(null);
   const [currentUnscheduledOrders, setCurrentUnscheduledOrders] = React.useState<PlanViewUnscheduledOrder[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  const unitsForSelect = React.useMemo(() => 
+    lineGroups.map((group) => ({ id: group.id?.toString() || '', name: group.groupName })),
+    [lineGroups] 
+  );
+
+  const linesForSelect = React.useMemo(() => 
+    lines.map((line) => ({ id: line.id, unitId: line.unitId, name: line.lineName })),
+    [lines] 
+  );
+
+  // Load data on mount
+  React.useEffect(() => {
+    searchLineGroups({ isActive: true });
+    searchLines(); // Remove { active: true } as it's not supported in LineSearchParams
+  }, [searchLineGroups, searchLines]);
 
 
   const form = useForm<ScheduleOrderFormValues>({
@@ -54,7 +67,7 @@ export default function UnscheduledOrdersPage() {
   const watchedUnitId = form.watch('unitId');
   const availableLines = React.useMemo(() => {
     if (!watchedUnitId) return [];
-    return linesForSelect.filter(line => line.unitId === watchedUnitId);
+    return linesForSelect.filter((line: { id: string; unitId?: string; name: string }) => line.unitId === watchedUnitId);
   }, [watchedUnitId]);
 
   const fetchUnscheduled = React.useCallback(async () => {
@@ -99,7 +112,7 @@ export default function UnscheduledOrdersPage() {
 
   React.useEffect(() => {
     if (watchedUnitId) {
-        const currentLineIsValid = availableLines.some(line => line.id === form.getValues('lineId'));
+        const currentLineIsValid = availableLines.some((line: { id: string; unitId?: string; name: string }) => line.id === form.getValues('lineId'));
         if (!currentLineIsValid) {
             form.setValue('lineId', '');
         }
@@ -116,8 +129,8 @@ export default function UnscheduledOrdersPage() {
   const onConfirmSchedule = async (data: ScheduleOrderFormValues) => {
     if (!selectedOrderForScheduling || !selectedOrderForScheduling.id) return;
 
-    const unitName = unitsForSelect.find(u => u.id === data.unitId)?.name || data.unitId;
-    const lineName = linesForSelect.find(l => l.id === data.lineId)?.name || data.lineId;
+    const unitName = unitsForSelect.find((u: { id: string; name: string }) => u.id === data.unitId)?.name || data.unitId;
+    const lineName = linesForSelect.find((l: { id: string; unitId?: string; name: string }) => l.id === data.lineId)?.name || data.lineId;
     
     try {
       await updateOrderStatus(selectedOrderForScheduling.id, 'scheduled');
@@ -237,7 +250,7 @@ export default function UnscheduledOrdersPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {unitsForSelect.map(unit => (
+                            {unitsForSelect.map((unit: { id: string; name: string }) => (
                               <SelectItem key={unit.id} value={unit.id}>
                                 {unit.name}
                               </SelectItem>
@@ -264,7 +277,7 @@ export default function UnscheduledOrdersPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {availableLines.map(line => (
+                            {availableLines.map((line: { id: string; unitId?: string; name: string }) => (
                               <SelectItem key={line.id} value={line.id}>
                                 {line.name}
                               </SelectItem>

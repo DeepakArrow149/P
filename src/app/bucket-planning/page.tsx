@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
 import { badgeVariants } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { mockLinesData } from '@/lib/mockData';
+import { mockLinesData, type MockLine } from '@/lib/mockData';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   loadPlan as loadPlanFromStore,
@@ -35,10 +35,10 @@ import {
 
 const LOCALSTORAGE_KEY_ACTIVE_BUCKET_PLAN_ID = 'trackTechActiveBucketPlanId_v1';
 
-const initialResources: SchedulableResource[] = mockLinesData.map(line => ({
+const initialResources: SchedulableResource[] = mockLinesData.map((line: MockLine) => ({
   id: line.id,
   name: line.lineName,
-  capacity: line.defaultCapacity || 0,
+  capacity: line.capacity || 0,
 }));
 
 // Updated mock orders for Bucket Planning

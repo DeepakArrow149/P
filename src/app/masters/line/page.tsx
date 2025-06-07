@@ -25,10 +25,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { mockUnitsData, type MockUnit } from '@/lib/mockData'; 
 import { MasterDataLogDialog } from '@/components/masters/MasterDataLogDialog';
 import { useLineApi } from '@/hooks/useLineApi';
+import { useLineGroupApi } from '@/hooks/useLineGroupApi';
 import type { Line } from '@/lib/lineRepository';
+import type { LineGroup } from '@/lib/lineGroupRepository';
 
 interface LineData extends Line {}
 
@@ -66,6 +67,8 @@ export default function LineMasterPage() {
     searchLines 
   } = useLineApi();
   
+  const { lineGroups, searchLineGroups } = useLineGroupApi();
+  
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingLine, setEditingLine] = React.useState<LineData | null>(null);
   const [filterText, setFilterText] = React.useState('');
@@ -80,9 +83,14 @@ export default function LineMasterPage() {
   });
 
   const unitsForDropdown = React.useMemo(() => 
-    mockUnitsData.map(u => ({ id: u.id, unitName: u.unitName })),
-    [] 
+    lineGroups.map((group: LineGroup) => ({ id: group.id?.toString() || '', unitName: group.groupName })),
+    [lineGroups] 
   );
+
+  // Load line groups on component mount
+  React.useEffect(() => {
+    searchLineGroups({ isActive: true });
+  }, [searchLineGroups]);
 
   React.useEffect(() => {
     if (editingLine) {
@@ -167,8 +175,8 @@ export default function LineMasterPage() {
 
   const getUnitNameById = (unitId: string | undefined): string => {
     if (!unitId) return '-';
-    const unit = mockUnitsData.find(u => u.id === unitId); 
-    return unit ? unit.unitName : unitId; 
+    const group = lineGroups.find((g: LineGroup) => g.id?.toString() === unitId); 
+    return group ? group.groupName : unitId; 
   };
 
   const linesToDisplay = React.useMemo(() =>
@@ -336,7 +344,7 @@ export default function LineMasterPage() {
                       </FormControl>
                       <SelectContent>
                         {unitsForDropdown.length > 0 ? (
-                            unitsForDropdown.map(unit => (
+                            unitsForDropdown.map((unit: { id: string; unitName: string }) => (
                                <SelectItem key={unit.id} value={unit.id}>{unit.unitName}</SelectItem>
                             ))
                         ) : (

@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { lineCapacityRepository } from '@/lib/lineCapacityRepository';
-import { persistentMockLineCapacityService } from '@/lib/persistentMockLineCapacityService';
 
 // Validation schemas
 const updateLineCapacitySchema = z.object({
@@ -45,20 +44,10 @@ export async function GET(
           error: 'Invalid line capacity ID',
         },
         { status: 400 }
-      );
-    }
+      );    }
     
-    // Try database first, fall back to persistent mock service
-    let lineCapacity;
-    let dataSource = 'database';
-    
-    try {
-      lineCapacity = await lineCapacityRepository.getLineCapacityById(lineCapacityId);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      lineCapacity = await persistentMockLineCapacityService.getLineCapacityById(lineCapacityId);
-      dataSource = 'mock';
-    }
+    // Get line capacity from database
+    const lineCapacity = await lineCapacityRepository.getLineCapacityById(lineCapacityId);
 
     if (!lineCapacity) {
       return NextResponse.json(
@@ -73,7 +62,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: lineCapacity,
-      dataSource,
+      source: 'database',
     });
   } catch (error) {
     console.error('Error fetching line capacity:', error);
@@ -107,26 +96,16 @@ export async function PUT(
         { status: 400 }
       );
     }
-    
-    const body = await request.json();
+      const body = await request.json();
     const validatedData = updateLineCapacitySchema.parse(body);
     
-    // Try database first, fall back to persistent mock service
-    let updatedLineCapacity;
-    let dataSource = 'database';
-    
-    try {
-      updatedLineCapacity = await lineCapacityRepository.updateLineCapacity(lineCapacityId, validatedData);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      updatedLineCapacity = await persistentMockLineCapacityService.updateLineCapacity(lineCapacityId, validatedData);
-      dataSource = 'mock';
-    }
+    // Update line capacity in database
+    const updatedLineCapacity = await lineCapacityRepository.updateLineCapacity(lineCapacityId, validatedData);
 
     return NextResponse.json({
       success: true,
       data: updatedLineCapacity,
-      dataSource,
+      source: 'database',
       message: 'Line capacity updated successfully',
     });
   } catch (error) {
@@ -192,22 +171,17 @@ export async function DELETE(
           error: 'Invalid line capacity ID',
         },
         { status: 400 }
-      );
-    }
-    
-    // Try database first, fall back to persistent mock service
-    let success;
-    let dataSource = 'database';
-    
+      );    }
+      // Delete line capacity from database
     try {
-      success = await lineCapacityRepository.deleteLineCapacity(lineCapacityId);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      success = await persistentMockLineCapacityService.deleteLineCapacity(lineCapacityId);
-      dataSource = 'mock';
-    }
-
-    if (!success) {
+      await lineCapacityRepository.deleteLineCapacity(lineCapacityId);
+      
+      return NextResponse.json({
+        success: true,
+        source: 'database',
+        message: 'Line capacity deleted successfully',
+      });
+    } catch (error) {
       return NextResponse.json(
         {
           success: false,
@@ -216,12 +190,6 @@ export async function DELETE(
         { status: 404 }
       );
     }
-
-    return NextResponse.json({
-      success: true,
-      dataSource,
-      message: 'Line capacity deleted successfully',
-    });
   } catch (error) {
     console.error('Error deleting line capacity:', error);
 

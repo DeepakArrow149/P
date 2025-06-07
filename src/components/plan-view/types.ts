@@ -126,9 +126,13 @@ export interface DailyData {
 }
 
 export interface LineGroup {
-  id: string;
+  id?: number;
   groupName: string;
+  description?: string;
   lineIds: string[];
+  isActive?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface PullForwardOptions {

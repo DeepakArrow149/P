@@ -4,7 +4,6 @@ import type { Task, VerticalTask, UnscheduledOrder, VerticalTaskDailyData, Sched
 import { format, addDays, parseISO, differenceInDays as fnsDifferenceInDays, eachDayOfInterval as fnsEachDayOfInterval } from 'date-fns';
 import { mockLearningCurves } from './learningCurveTypes';
 import { calculateDailyProduction } from './learningCurve';
-import { mockLinesData } from './mockData';
 
 // Re-export types for consumers
 export type { PlanData, PlanInfo }; 
@@ -161,23 +160,9 @@ const defaultAllocatedOrders = allMockOrdersForDefault.slice(0, 4);
 
 
 export const getDefaultPlanTasks = (): { horizontalTasks: Task[], verticalTasks: VerticalTask[] } => {
-  const today = new Date();
-  const schedulableResources: SchedulableResource[] = mockLinesData.map(line => ({
-      id: line.id, name: line.lineName, capacity: line.defaultCapacity || 0, unitId: line.unitId
-  }));
-
-  const horizontalTasks: Task[] = [];
-  const verticalTasks: VerticalTask[] = [];
-
-  if (schedulableResources.length >= 4 && defaultAllocatedOrders.length >=4) {
-    const { hTask: h1, vTask: v1 } = createDefaultAllocatedTask(defaultAllocatedOrders[0], schedulableResources[0].id, addDays(today, 1), schedulableResources[0].capacity || 20);
-    const { hTask: h2, vTask: v2 } = createDefaultAllocatedTask(defaultAllocatedOrders[1], schedulableResources[1].id, addDays(today, 2), schedulableResources[1].capacity || 20);
-    const { hTask: h3, vTask: v3 } = createDefaultAllocatedTask(defaultAllocatedOrders[2], schedulableResources[2].id, addDays(today, 1), schedulableResources[2].capacity || 20);
-    const { hTask: h4, vTask: v4 } = createDefaultAllocatedTask(defaultAllocatedOrders[3], schedulableResources[3].id, addDays(today, 3), schedulableResources[3].capacity || 20);
-    horizontalTasks.push(h1, h2, h3, h4);
-    verticalTasks.push(v1, v2, v3, v4);
-  }
-  return { horizontalTasks, verticalTasks };
+  // Return empty tasks since we've removed mock data dependencies
+  // In a real implementation, this would fetch from the database
+  return { horizontalTasks: [], verticalTasks: [] };
 };
 
 const { horizontalTasks: defaultHTasks, verticalTasks: defaultVTasks } = getDefaultPlanTasks();

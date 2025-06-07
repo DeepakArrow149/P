@@ -56,27 +56,16 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
+  try {    const { id } = await params;
     const body = await request.json();
     const validatedData = updateLineSchema.parse(body);
     
-    // Try database first, fall back to persistent mock service
-    let updatedLine;
-    let dataSource = 'database';
-    
-    try {
-      updatedLine = await lineRepository.update(id, validatedData);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      updatedLine = await persistentMockLineService.update(id, validatedData);
-      dataSource = 'mock';
-    }
+    const updatedLine = await lineRepository.update(id, validatedData);
 
     return NextResponse.json({
       success: true,
       data: updatedLine,
-      dataSource,
+      dataSource: 'database',
       message: 'Line updated successfully',
     });
   } catch (error) {
@@ -131,20 +120,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
+  try {    const { id } = await params;
     
-    // Try database first, fall back to persistent mock service
-    let deleted;
-    let dataSource = 'database';
-    
-    try {
-      deleted = await lineRepository.delete(id);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      deleted = await persistentMockLineService.delete(id);
-      dataSource = 'mock';
-    }
+    const deleted = await lineRepository.delete(id);
 
     if (!deleted) {
       return NextResponse.json(
@@ -158,7 +136,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      dataSource,
+      dataSource: 'database',
       message: 'Line deleted successfully',
     });
   } catch (error) {

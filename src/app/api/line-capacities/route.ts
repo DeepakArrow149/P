@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { lineCapacityRepository } from '@/lib/lineCapacityRepository';
-import { persistentMockLineCapacityService } from '@/lib/persistentMockLineCapacityService';
 
 // Validation schemas
 const createLineCapacitySchema = z.object({
@@ -44,25 +43,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
   try {
     const url = new URL(request.url);
     const searchParams = Object.fromEntries(url.searchParams.entries());
+      const validatedParams = searchParamsSchema.parse(searchParams);
     
-    const validatedParams = searchParamsSchema.parse(searchParams);
-    
-    // Try database first, fall back to persistent mock service
-    let lineCapacities;
-    let dataSource = 'database';
-    
-    try {
-      lineCapacities = await lineCapacityRepository.getLineCapacities(validatedParams);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      lineCapacities = await persistentMockLineCapacityService.getLineCapacities(validatedParams);
-      dataSource = 'mock';
-    }
+    // Get line capacities from database
+    const lineCapacities = await lineCapacityRepository.getLineCapacities(validatedParams);
 
     return NextResponse.json({
       success: true,
       data: lineCapacities,
-      dataSource,
+      source: 'database',
       count: lineCapacities.length,
     });
   } catch (error) {
@@ -92,27 +81,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
 // POST /api/line-capacities - Create new line capacity
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<any>>> {
-  try {
-    const body = await request.json();
+  try {    const body = await request.json();
     const validatedData = createLineCapacitySchema.parse(body);
     
-    // Try database first, fall back to persistent mock service
-    let newLineCapacity;
-    let dataSource = 'database';
-    
-    try {
-      newLineCapacity = await lineCapacityRepository.createLineCapacity(validatedData);
-    } catch (dbError) {
-      console.warn('Database error, falling back to mock data:', dbError);
-      newLineCapacity = await persistentMockLineCapacityService.createLineCapacity(validatedData);
-      dataSource = 'mock';
-    }
+    // Create line capacity in database
+    const newLineCapacity = await lineCapacityRepository.createLineCapacity(validatedData);
 
     return NextResponse.json(
       {
         success: true,
         data: newLineCapacity,
-        dataSource,
+        source: 'database',
         message: 'Line capacity created successfully',
       },
       { status: 201 }

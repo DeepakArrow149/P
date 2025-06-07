@@ -15,7 +15,6 @@ import { MergeOrdersDialog } from '@/components/plan-view/MergeOrdersDialog';
 import { calculateDailyProduction } from '@/lib/learningCurve';
 import type { LearningCurveMaster } from '@/lib/learningCurveTypes';
 import { mockLearningCurves } from '@/lib/learningCurveTypes';
-import { mockUnitsData, mockLinesData } from '@/lib/mockData';
 import {
   loadPlan as loadPlanFromStore,
   getAvailablePlans as getAvailablePlansFromStore,
@@ -45,6 +44,8 @@ import { Loader2 } from 'lucide-react';
 import { TargetDisplayPanel } from '@/components/plan-view/TargetDisplayPanel';
 import { TimelineResourcePane } from '@/components/plan-view/timeline-resource-pane';
 import { SubProcessPlanningView } from '@/components/plan-view/SubProcessPlanningView';
+import { useLineApi } from '@/hooks/useLineApi';
+import { useLineGroupApi } from '@/hooks/useLineGroupApi';
 
 
 const LOCALSTORAGE_KEY_ACTIVE_PLAN_ID = 'trackTechActivePlanId_v2';
@@ -64,18 +65,17 @@ const ROTATION_COLORS = [
 ];
 
 // Helper functions moved to module scope
-const generateInitialSchedulableResources = (lines: typeof mockLinesData): SchedulableResource[] => {
-  return lines.map(line => ({
-   id: line.id, name: line.lineName, capacity: line.defaultCapacity || 0, unitId: line.unitId
+const generateInitialSchedulableResources = (lines: any[]): SchedulableResource[] => {
+  return lines.map((line: any) => ({
+   id: line.id, name: line.lineName, capacity: line.defaultCapacity || 0
   }));
 };
 
 const generateInitialHorizontalDisplayResources = (
-    units: typeof mockUnitsData,
+    lineGroups: LineGroup[],
     allSchedulableLines: SchedulableResource[],
     currentTasks: Task[],
-    planName: string,
-    lineGroups: LineGroup[]
+    planName: string
 ): Resource[] => {
   const resources: Resource[] = [];
   const planNameToDisplay = planName || DEFAULT_PLAN_NAME;
@@ -99,9 +99,8 @@ const generateInitialHorizontalDisplayResources = (
       const line = linesMap.get(lineId);
       if (line) {
         const scheduledTasksOnLine = currentTasks.filter(task => task.resourceId === line.id).length;
-        const unit = units.find(u => u.id === line.unitId);
         resources.push({
-          id: line.id, type: 'unit', name: line.name, details: unit?.unitName || group.groupName,
+          id: line.id, type: 'unit', name: line.name, details: group.groupName,
           values: [line.capacity || 0, scheduledTasksOnLine], isExpandable: true, capacityPerDay: line.capacity || 0,
         });
       }
@@ -119,9 +118,8 @@ const generateInitialHorizontalDisplayResources = (
     });
     unassignedLines.forEach(line => {
         const scheduledTasksOnLine = currentTasks.filter(task => task.resourceId === line.id).length;
-        const unit = units.find(u => u.id === line.unitId);
         resources.push({
-            id: line.id, type: 'unit', name: line.name, details: unit?.unitName || 'Unassigned',
+            id: line.id, type: 'unit', name: line.name, details: 'Unassigned',
             values: [line.capacity || 0, scheduledTasksOnLine], isExpandable: true, capacityPerDay: line.capacity || 0,
         });
     });
@@ -178,6 +176,10 @@ const mockSubProcessOrders: SubProcessOrder[] = [
 export default function PlanViewPage() {
   const { toast } = useToast();
   
+  // API hooks for real data
+  const { lines, searchLines } = useLineApi();
+  const { lineGroups, searchLineGroups } = useLineGroupApi();
+  
   // Initialize with server-safe default
   const serverSafeInitialDate = React.useMemo(() => startOfDay(parseISO("2024-01-01T00:00:00.000Z")), []);
 
@@ -231,7 +233,7 @@ export default function PlanViewPage() {
   const [pushPullState, setPushPullState] = React.useState<PushPullState>({ isActive: false, originTaskId: null, scope: null });
   const [holidaysMap, setHolidaysMap] = React.useState<Map<string, HolidayDetail>>(new Map());
   const [lineGroupsData, setLineGroupsData] = React.useState<LineGroup[]>([]);
-  const [schedulableResources, setSchedulableResources] = React.useState<SchedulableResource[]>(() => generateInitialSchedulableResources(mockLinesData));
+  const [schedulableResources, setSchedulableResources] = React.useState<SchedulableResource[]>([]);
   
   const [selectedResourceIds, setSelectedResourceIds] = React.useState<string[]>([]);
 
@@ -315,10 +317,30 @@ export default function PlanViewPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, serverSafeInitialDate]); // Only run on client mount
 
+  // Load API data on component mount
+  React.useEffect(() => {
+    if (isClient) {
+      searchLines();
+      searchLineGroups({ isActive: true });
+    }
+  }, [isClient, searchLines, searchLineGroups]);
+
+  // Update schedulable resources when lines data changes
+  React.useEffect(() => {
+    if (lines.length > 0) {
+      const newResources = generateInitialSchedulableResources(lines);
+      setSchedulableResources(newResources);
+    }
+  }, [lines]);
+
+  // Update line groups data when lineGroups changes
+  React.useEffect(() => {
+    setLineGroupsData(lineGroups);
+  }, [lineGroups]);
 
   const horizontalDisplayResources = React.useMemo(() => {
     if(!isClient) return []; // Important: Don't try to generate this on server or before client data is ready
-    return generateInitialHorizontalDisplayResources(mockUnitsData, schedulableResources, rawHorizontalTasks, activePlanName, lineGroupsData);
+    return generateInitialHorizontalDisplayResources(lineGroupsData, schedulableResources, rawHorizontalTasks, activePlanName);
   }, [isClient, schedulableResources, rawHorizontalTasks, activePlanName, lineGroupsData]);
 
   const getTimelineDisplayConfig = React.useCallback((
