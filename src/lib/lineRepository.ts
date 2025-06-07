@@ -44,22 +44,21 @@ export class LineRepository {
   private async ensureTableExists(): Promise<void> {
     const pool = await getConnection();
     const connection = await pool.getConnection();
-    try {
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS lines (
+    try {      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS \`lines\` (
           id VARCHAR(50) PRIMARY KEY,
-          line_code VARCHAR(20) NOT NULL UNIQUE,
-          line_name VARCHAR(100) NOT NULL,
-          unit_id VARCHAR(50) NOT NULL,
-          line_type ENUM('Sewing', 'Cutting', 'Finishing', 'Assembly', 'Packing', 'Other') DEFAULT NULL,
-          default_capacity INT DEFAULT 0,
+          lineCode VARCHAR(20) NOT NULL UNIQUE,
+          lineName VARCHAR(100) NOT NULL,
+          unitId VARCHAR(50) NOT NULL,
+          lineType ENUM('Sewing', 'Cutting', 'Finishing', 'Assembly', 'Packing', 'Other') DEFAULT NULL,
+          defaultCapacity INT DEFAULT 0,
           notes TEXT DEFAULT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          INDEX idx_line_code (line_code),
-          INDEX idx_line_name (line_name),
-          INDEX idx_unit_id (unit_id),
-          INDEX idx_line_type (line_type)
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_lineCode (lineCode),
+          INDEX idx_lineName (lineName),
+          INDEX idx_unitId (unitId),
+          INDEX idx_lineType (lineType)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
     } finally {
@@ -68,44 +67,40 @@ export class LineRepository {
   }
 
   private mapRowToLine(row: RowDataPacket): Line {
-    return {
-      id: row.id,
-      lineCode: row.line_code,
-      lineName: row.line_name,
-      unitId: row.unit_id,
-      lineType: row.line_type || undefined,
-      defaultCapacity: row.default_capacity || undefined,
+    return {      id: row.id,
+      lineCode: row.lineCode,
+      lineName: row.lineName,
+      unitId: row.unitId,
+      lineType: row.lineType || undefined,
+      defaultCapacity: row.defaultCapacity || undefined,
       notes: row.notes || undefined,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
-  }
-  async findMany(params: LineSearchParams = {}): Promise<Line[]> {
+  }  async findMany(params: LineSearchParams = {}): Promise<Line[]> {
     await this.ensureTableExists();
     const pool = await getConnection();
     const connection = await pool.getConnection();
     
     try {
-      let query = 'SELECT * FROM lines WHERE 1=1';
-      const queryParams: any[] = [];
-
-      if (params.search) {
-        query += ' AND (line_code LIKE ? OR line_name LIKE ?)';
+      let query = 'SELECT * FROM `lines` WHERE 1=1';
+      const queryParams: any[] = [];      if (params.search) {
+        query += ' AND (lineCode LIKE ? OR lineName LIKE ?)';
         const searchPattern = `%${params.search}%`;
         queryParams.push(searchPattern, searchPattern);
       }
 
       if (params.unitId) {
-        query += ' AND unit_id = ?';
+        query += ' AND unitId = ?';
         queryParams.push(params.unitId);
       }
 
       if (params.lineType) {
-        query += ' AND line_type = ?';
+        query += ' AND lineType = ?';
         queryParams.push(params.lineType);
       }
 
-      query += ' ORDER BY line_code ASC';
+      query += ' ORDER BY lineCode ASC';
 
       if (params.limit) {
         query += ' LIMIT ?';
@@ -127,10 +122,9 @@ export class LineRepository {
     await this.ensureTableExists();
     const pool = await getConnection();
     const connection = await pool.getConnection();
-    
-    try {
+      try {
       const [rows] = await connection.execute(
-        'SELECT * FROM lines WHERE id = ?',
+        'SELECT * FROM `lines` WHERE id = ?',
         [id]
       );
       const results = rows as RowDataPacket[];
@@ -143,10 +137,8 @@ export class LineRepository {
     await this.ensureTableExists();
     const pool = await getConnection();
     const connection = await pool.getConnection();
-    
-    try {
-      const [rows] = await connection.execute(
-        'SELECT * FROM lines WHERE line_code = ?',
+      try {      const [rows] = await connection.execute(
+        'SELECT * FROM `lines` WHERE lineCode = ?',
         [lineCode]
       );
       const results = rows as RowDataPacket[];
@@ -168,10 +160,8 @@ export class LineRepository {
     const connection = await pool.getConnection();
     
     try {
-      const id = `line_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      await connection.execute(
-        `INSERT INTO lines (id, line_code, line_name, unit_id, line_type, default_capacity, notes) 
+      const id = `line_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;      await connection.execute(
+        `INSERT INTO \`lines\` (id, lineCode, lineName, unitId, lineType, defaultCapacity, notes) 
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
@@ -216,26 +206,24 @@ export class LineRepository {
     
     try {
       const updateFields: string[] = [];
-      const updateValues: any[] = [];
-
-      if (data.lineCode !== undefined) {
-        updateFields.push('line_code = ?');
+      const updateValues: any[] = [];      if (data.lineCode !== undefined) {
+        updateFields.push('lineCode = ?');
         updateValues.push(data.lineCode);
       }
       if (data.lineName !== undefined) {
-        updateFields.push('line_name = ?');
+        updateFields.push('lineName = ?');
         updateValues.push(data.lineName);
       }
       if (data.unitId !== undefined) {
-        updateFields.push('unit_id = ?');
+        updateFields.push('unitId = ?');
         updateValues.push(data.unitId);
       }
       if (data.lineType !== undefined) {
-        updateFields.push('line_type = ?');
+        updateFields.push('lineType = ?');
         updateValues.push(data.lineType);
       }
       if (data.defaultCapacity !== undefined) {
-        updateFields.push('default_capacity = ?');
+        updateFields.push('defaultCapacity = ?');
         updateValues.push(data.defaultCapacity);
       }
       if (data.notes !== undefined) {
@@ -248,9 +236,8 @@ export class LineRepository {
       }
 
       updateValues.push(id);
-      
-      await connection.execute(
-        `UPDATE lines SET ${updateFields.join(', ')} WHERE id = ?`,
+        await connection.execute(
+        `UPDATE \`lines\` SET ${updateFields.join(', ')} WHERE id = ?`,
         updateValues
       );
 
@@ -271,8 +258,7 @@ export class LineRepository {
     const connection = await pool.getConnection();
     
     try {
-      const [result] = await connection.execute(
-        'DELETE FROM lines WHERE id = ?',
+      const [result] = await connection.execute(        'DELETE FROM `lines` WHERE id = ?',
         [id]
       );
       
@@ -287,23 +273,20 @@ export class LineRepository {
     const pool = await getConnection();
     const connection = await pool.getConnection();
     
-    try {
-      let query = 'SELECT COUNT(*) as count FROM lines WHERE 1=1';
-      const queryParams: any[] = [];
-
-      if (params.search) {
-        query += ' AND (line_code LIKE ? OR line_name LIKE ?)';
+    try {      let query = 'SELECT COUNT(*) as count FROM `lines` WHERE 1=1';
+      const queryParams: any[] = [];      if (params.search) {
+        query += ' AND (lineCode LIKE ? OR lineName LIKE ?)';
         const searchPattern = `%${params.search}%`;
         queryParams.push(searchPattern, searchPattern);
       }
 
       if (params.unitId) {
-        query += ' AND unit_id = ?';
+        query += ' AND unitId = ?';
         queryParams.push(params.unitId);
       }
 
       if (params.lineType) {
-        query += ' AND line_type = ?';
+        query += ' AND lineType = ?';
         queryParams.push(params.lineType);
       }
 
@@ -318,9 +301,8 @@ export class LineRepository {
     await this.ensureTableExists();
     const pool = await getConnection();
     const connection = await pool.getConnection();
-    
-    try {
-      const [result] = await connection.execute('DELETE FROM lines');
+      try {
+      const [result] = await connection.execute('DELETE FROM `lines`');
       const deleteResult = result as OkPacket;
       return deleteResult.affectedRows;
     } finally {

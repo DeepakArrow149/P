@@ -27,7 +27,8 @@ export const addLineGroup = (groupData: Omit<LineGroup, 'id'>): LineGroup => {
   const groups = getLineGroups();
   const newGroup: LineGroup = {
     ...groupData,
-    id: `lg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    // For localStorage implementation, we'll use a timestamp-based number ID
+    id: Date.now(),
   };
   groups.push(newGroup);
   saveLineGroups(groups);
@@ -45,7 +46,7 @@ export const updateLineGroup = (updatedGroup: LineGroup): boolean => {
   return false;
 };
 
-export const deleteLineGroup = (groupId: string): boolean => {
+export const deleteLineGroup = (groupId: number | string): boolean => {
   let groups = getLineGroups();
   const initialLength = groups.length;
   groups = groups.filter(g => g.id !== groupId);

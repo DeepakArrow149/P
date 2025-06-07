@@ -13,6 +13,41 @@ const buyerSchema = z.object({
   country: z.string().max(50, 'Country must be 50 chars or less').optional().default(''),
 });
 
+// GET - Fetch all buyers with optional search
+export async function GET(request: NextRequest) {
+  try {
+    await BuyerRepository.createTable();
+    
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    
+    let buyers;
+    if (search) {
+      buyers = await BuyerRepository.search(search);
+    } else {
+      buyers = await BuyerRepository.findAll();
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: buyers,
+      dataSource: 'database',
+      count: buyers.length,
+    });
+  } catch (error) {
+    console.error('GET /api/buyers error:', error);
+    
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch buyers',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 // POST - Create new buyer
 export async function POST(request: NextRequest) {
   try {

@@ -14,11 +14,17 @@ async function checkTableStructure() {
 
         console.log('✅ Connected to database successfully!');
         console.log('📋 Checking table structures...\n');
-        
-        // Check buyers table
+          // Check buyers table
         const [buyerCols] = await connection.execute('DESCRIBE buyers');
         console.log('🏢 BUYERS table structure:');
         buyerCols.forEach(col => {
+            console.log(`   ${col.Field} (${col.Type}) - ${col.Null === 'YES' ? 'NULL' : 'NOT NULL'}${col.Key ? ` [${col.Key}]` : ''}`);
+        });
+
+        // Check lines table
+        const [linesCols] = await connection.execute('DESCRIBE `lines`');
+        console.log('\n🏭 LINES table structure:');
+        linesCols.forEach(col => {
             console.log(`   ${col.Field} (${col.Type}) - ${col.Null === 'YES' ? 'NULL' : 'NOT NULL'}${col.Key ? ` [${col.Key}]` : ''}`);
         });
 

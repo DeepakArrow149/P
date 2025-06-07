@@ -168,11 +168,10 @@ export function useLineApi(): UseLineApiReturn {
       return false;
     }
   }, [handleError]);
-
   // Load lines on mount
   useEffect(() => {
     searchLines();
-  }, [searchLines]);
+  }, []); // Empty dependency array to only run once on mount
 
   return {
     lines,
