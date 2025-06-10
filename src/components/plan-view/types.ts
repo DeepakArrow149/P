@@ -141,7 +141,7 @@ export interface PullForwardOptions {
   toDate?: Date;
 }
 
-export type SubProcessViewMode = 'cutting' | 'embroidery' | 'finishing' | null;
+export type SubProcessViewMode = 'cutting' | 'embroidery' | 'finishing' | 'high-level-planning' | 'low-level-planning' | null;
 
 export interface SubProcessOrder {
   id: string;

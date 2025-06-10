@@ -1,4 +1,3 @@
-
 // Use client directive for event handling and state
 'use client';
 
@@ -43,7 +42,9 @@ import {
   ListTree,
   Layers, 
   ClipboardList,
-  Search
+  Search,
+  Target,
+  Zap
 } from 'lucide-react';
 import { format, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, addHours, subHours, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
@@ -389,6 +390,15 @@ export function TimelineToolbar({
           <DropdownMenuItem onSelect={() => handleSubProcessViewChange('cutting')} disabled={subProcessViewMode === 'cutting'}>Cutting View</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => handleSubProcessViewChange('embroidery')} disabled={subProcessViewMode === 'embroidery'}>Embroidery View</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => handleSubProcessViewChange('finishing')} disabled={subProcessViewMode === 'finishing'}>Finishing View</DropdownMenuItem>
+          <DropdownMenuSeparator/>
+          <DropdownMenuItem onSelect={() => handleSubProcessViewChange('high-level-planning')} disabled={subProcessViewMode === 'high-level-planning'}>
+            <Target className="mr-2 h-4 w-4" />
+            High-Level Planning Board
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => handleSubProcessViewChange('low-level-planning')} disabled={subProcessViewMode === 'low-level-planning'}>
+            <Zap className="mr-2 h-4 w-4" />
+            Low-Level Planning Board
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

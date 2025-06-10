@@ -6,6 +6,8 @@ import { PageHeader } from '@/components/page-header';
 import { TimelineToolbar } from '@/components/plan-view/timeline-toolbar';
 import TimelineGrid from '@/components/plan-view/timeline-grid';
 import { VerticalScheduler } from '@/components/plan-view/vertical-scheduler';
+import { HighLevelPlanningBoard } from '@/components/plan-view/HighLevelPlanningBoard';
+import { LowLevelPlanningBoard } from '@/components/plan-view/LowLevelPlanningBoard';
 import type { Resource, Task, DailyData, UnscheduledOrder, SchedulableResource, VerticalTask, TimelineViewMode, VerticalTaskDailyData as TaskDailyData, MergeableOrderItem, RotationMode, PushPullState, HolidayDetail, RowHeightLevel, SubProcessOrder, SearchFormValues, TnaPlan, SubProcessViewMode, EqualiseOrderOptions } from '@/components/plan-view/types';
 import { RESOURCE_PANE_WIDTH, ROW_HEIGHT_CONFIG } from '@/components/plan-view/types';
 import { addDays, format, startOfWeek, eachDayOfInterval, parseISO, differenceInDays as fnsDifferenceInDays, addBusinessDays, startOfHour, addHours, startOfMonth, endOfMonth, endOfWeek as dateFnsEndOfWeek, eachWeekOfInterval, addMonths as dateFnsAddMonths, getDaysInMonth, isSameDay as isTodayChecker, isSameHour, isSameMonth, getMonth, subWeeks, subDays, subMonths, endOfDay, startOfDay } from 'date-fns';
@@ -305,7 +307,7 @@ export default function PlanViewPage() {
       }
       
       const storedSubProcessViewMode = localStorage.getItem(LOCALSTORAGE_KEY_SUB_PROCESS_VIEW_MODE) as SubProcessViewMode | null;
-      if (storedSubProcessViewMode && ['cutting', 'embroidery', 'finishing'].includes(storedSubProcessViewMode)) {
+      if (storedSubProcessViewMode && ['cutting', 'embroidery', 'finishing', 'high-level-planning', 'low-level-planning'].includes(storedSubProcessViewMode)) {
         setSubProcessViewMode(storedSubProcessViewMode);
       } else {
         setSubProcessViewMode(null);
@@ -1997,7 +1999,15 @@ export default function PlanViewPage() {
             className="flex-1 flex flex-col min-h-0 overflow-hidden" // overflow-hidden here to let TimelineGrid manage its scroll
             ref={rightPaneHorizontalScrollRef} // Ref for wheel event
         >
-          {subProcessViewMode ? (
+          {subProcessViewMode === 'high-level-planning' ? (
+            <React.Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}>
+              <HighLevelPlanningBoard />
+            </React.Suspense>
+          ) : subProcessViewMode === 'low-level-planning' ? (
+            <React.Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}>
+              <LowLevelPlanningBoard />
+            </React.Suspense>
+          ) : subProcessViewMode ? (
             <React.Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}>
               <SubProcessPlanningView
                 orders={subProcessOrdersData}
