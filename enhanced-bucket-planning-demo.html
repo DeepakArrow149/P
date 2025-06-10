@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Bucket Planning Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* Custom animations matching the implementation */
+        @keyframes drag-start {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(0.95) rotate(2deg); opacity: 0.8; }
+        }
+        
+        @keyframes drag-hover {
+            0% { transform: translateY(0px); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+            100% { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); }
+        }
+        
+        @keyframes drop-success {
+            0% { transform: scale(1); background-color: rgba(34, 197, 94, 0.1); }
+            50% { transform: scale(1.05); background-color: rgba(34, 197, 94, 0.3); }
+            100% { transform: scale(1); background-color: rgba(34, 197, 94, 0.05); }
+        }
+        
+        @keyframes capacity-fill {
+            0% { width: 0%; opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes group-expand {
+            0% { opacity: 0; transform: translateY(-10px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0px) scale(1); }
+        }
+        
+        .animate-drag-start { animation: drag-start 0.2s ease-out; }
+        .animate-drag-hover { animation: drag-hover 0.3s ease-in-out infinite alternate; }
+        .animate-drop-success { animation: drop-success 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .animate-capacity-fill { animation: capacity-fill 0.8s ease-out; }
+        .animate-group-expand { animation: group-expand 0.3s ease-out; }
+        
+        .scale-102 { transform: scale(1.02); }
+    </style>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">🚀 Enhanced Bucket Planning Demo</h1>
+            <p class="text-gray-600">Interactive demonstration of all enhanced features</p>
+        </div>
+
+        <!-- Feature Showcase Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            <!-- Group-wise Order Allocation -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i data-lucide="layers" class="mr-2 h-5 w-5 text-blue-500"></i>
+                    Group-wise Order Allocation
+                </h2>
+                
+                <!-- Volume Production Group -->
+                <div class="border-l-4 border-l-blue-500 bg-blue-50/50 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-between cursor-pointer mb-3" onclick="toggleGroup('volume')">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="factory" class="h-4 w-4 text-blue-500"></i>
+                            <h3 class="font-semibold text-sm">Volume Production</h3>
+                            <span class="bg-gray-100 px-2 py-1 rounded text-xs">2 orders</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">10,500 pcs | ~210h avg</span>
+                            <i data-lucide="chevron-down" class="h-4 w-4" id="volume-chevron"></i>
+                        </div>
+                    </div>
+                    
+                    <div id="volume-orders" class="space-y-2 animate-group-expand">
+                        <div class="p-3 border rounded-lg bg-white shadow-sm cursor-grab hover:scale-102 transition-all duration-200 draggable-order" draggable="true">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="grip-vertical" class="h-4 w-4 text-gray-400"></i>
+                                <span class="font-semibold text-sm">BUCKET-ORD-001</span>
+                                <span class="bg-red-100 text-red-800 border border-red-200 px-2 py-1 rounded text-xs">HIGH</span>
+                                <i data-lucide="check-circle" class="h-4 w-4 text-green-500" title="Simple complexity"></i>
+                            </div>
+                            <p class="text-sm font-medium mb-1">Men's Basic Crew Neck T-Shirt</p>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                                <div>Qty: 2,500</div>
+                                <div>Hours: 180h</div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-3 border rounded-lg bg-white shadow-sm cursor-grab hover:scale-102 transition-all duration-200 draggable-order" draggable="true">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="grip-vertical" class="h-4 w-4 text-gray-400"></i>
+                                <span class="font-semibold text-sm">BUCKET-ORD-003</span>
+                                <span class="bg-red-100 text-red-800 border border-red-200 px-2 py-1 rounded text-xs">HIGH</span>
+                                <i data-lucide="clock" class="h-4 w-4 text-yellow-500" title="Medium complexity"></i>
+                            </div>
+                            <p class="text-sm font-medium mb-1">Men's Pique Polo Shirt</p>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                                <div>Qty: 8,000</div>
+                                <div>Hours: 240h</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Specialty Production Group -->
+                <div class="border-l-4 border-l-purple-500 bg-purple-50/50 rounded-lg p-4">
+                    <div class="flex items-center justify-between cursor-pointer mb-3" onclick="toggleGroup('specialty')">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="target" class="h-4 w-4 text-purple-500"></i>
+                            <h3 class="font-semibold text-sm">Specialty Production</h3>
+                            <span class="bg-gray-100 px-2 py-1 rounded text-xs">1 order</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">500 pcs | ~320h avg</span>
+                            <i data-lucide="chevron-down" class="h-4 w-4" id="specialty-chevron"></i>
+                        </div>
+                    </div>
+                    
+                    <div id="specialty-orders" class="space-y-2 animate-group-expand">
+                        <div class="p-3 border rounded-lg bg-white shadow-sm cursor-grab hover:scale-102 transition-all duration-200 draggable-order" draggable="true">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="grip-vertical" class="h-4 w-4 text-gray-400"></i>
+                                <span class="font-semibold text-sm">BUCKET-ORD-002</span>
+                                <span class="bg-yellow-100 text-yellow-800 border border-yellow-200 px-2 py-1 rounded text-xs">MEDIUM</span>
+                                <i data-lucide="alert-triangle" class="h-4 w-4 text-red-500" title="Complex"></i>
+                            </div>
+                            <p class="text-sm font-medium mb-1">Women's Waxed Cotton Jacket</p>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                                <div>Qty: 500</div>
+                                <div>Hours: 320h</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Capacity Visualization -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i data-lucide="trending-up" class="mr-2 h-5 w-5 text-green-500"></i>
+                    Capacity Visualization
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Resource 1 -->
+                    <div class="p-4 border rounded-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="font-medium">Line A - Basic Apparel</span>
+                            <span class="text-xs text-gray-500">85%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-capacity-fill transition-all duration-300" style="width: 85%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Used: 850 pcs</span>
+                            <span>Available: 150 pcs</span>
+                        </div>
+                    </div>
+
+                    <!-- Resource 2 -->
+                    <div class="p-4 border rounded-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="font-medium">Line B - Premium Wear</span>
+                            <span class="text-xs text-gray-500">95%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 animate-capacity-fill transition-all duration-300" style="width: 95%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Used: 475 pcs</span>
+                            <span>Available: 25 pcs</span>
+                        </div>
+                    </div>
+
+                    <!-- Resource 3 -->
+                    <div class="p-4 border rounded-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="font-medium">Line C - Accessories</span>
+                            <span class="text-xs text-gray-500">110%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-red-500 to-red-600 animate-capacity-fill transition-all duration-300" style="width: 100%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span class="text-red-600">Overbooked: +50 pcs</span>
+                            <span class="text-red-600">Capacity: 500 pcs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drag & Drop Demo Area -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i data-lucide="move" class="mr-2 h-5 w-5 text-purple-500"></i>
+                Interactive Drag & Drop Demo
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Drop Zones -->
+                <div>
+                    <h3 class="font-medium mb-3">Drop Zones (Hover to see effect)</h3>
+                    <div class="space-y-2">
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center transition-all duration-200 drop-zone" 
+                             ondragover="handleDragOver(event)" 
+                             ondragleave="handleDragLeave(event)"
+                             ondrop="handleDrop(event)">
+                            <span class="text-gray-500">Drop orders here - Line A</span>
+                        </div>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center transition-all duration-200 drop-zone"
+                             ondragover="handleDragOver(event)" 
+                             ondragleave="handleDragLeave(event)"
+                             ondrop="handleDrop(event)">
+                            <span class="text-gray-500">Drop orders here - Line B</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drag Instructions -->
+                <div>
+                    <h3 class="font-medium mb-3">Instructions</h3>
+                    <ul class="text-sm text-gray-600 space-y-2">
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="mouse-pointer" class="h-4 w-4"></i>
+                            Drag orders from the groups above
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="eye" class="h-4 w-4"></i>
+                            Watch smooth animations during drag
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="zap" class="h-4 w-4"></i>
+                            See visual feedback on hover
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check" class="h-4 w-4"></i>
+                            Success animation on drop
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Summary -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i data-lucide="star" class="mr-2 h-5 w-5 text-yellow-500"></i>
+                Enhanced Features Summary
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-green-500"></i>
+                    <span class="text-sm font-medium">Group-wise Allocation</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-blue-500"></i>
+                    <span class="text-sm font-medium">Smooth Animations</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-purple-500"></i>
+                    <span class="text-sm font-medium">Visual Feedback</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-orange-500"></i>
+                    <span class="text-sm font-medium">Capacity Visualization</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-teal-50 rounded-lg">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-teal-500"></i>
+                    <span class="text-sm font-medium">Priority Indicators</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-indigo-500"></i>
+                    <span class="text-sm font-medium">Responsive Design</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Status -->
+        <div class="mt-8 text-center">
+            <div class="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full">
+                <i data-lucide="check-circle" class="h-4 w-4"></i>
+                <span class="font-medium">Enhanced Bucket Planning Implementation Complete!</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Group toggle functionality
+        function toggleGroup(groupId) {
+            const orders = document.getElementById(groupId + '-orders');
+            const chevron = document.getElementById(groupId + '-chevron');
+            
+            if (orders.style.display === 'none') {
+                orders.style.display = 'block';
+                orders.classList.add('animate-group-expand');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                orders.style.display = 'none';
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Drag and drop functionality
+        let draggedElement = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add drag event listeners to draggable orders
+            const draggableOrders = document.querySelectorAll('.draggable-order');
+            
+            draggableOrders.forEach(order => {
+                order.addEventListener('dragstart', function(e) {
+                    draggedElement = this;
+                    this.classList.add('animate-drag-start');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                order.addEventListener('dragend', function(e) {
+                    this.classList.remove('animate-drag-start');
+                    draggedElement = null;
+                });
+            });
+        });
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            
+            const dropZone = event.currentTarget;
+            dropZone.classList.add('border-blue-500', 'bg-blue-50', 'scale-105');
+            dropZone.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
+        }
+
+        function handleDragLeave(event) {
+            const dropZone = event.currentTarget;
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'scale-105');
+            dropZone.style.boxShadow = '';
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const dropZone = event.currentTarget;
+            
+            // Reset drop zone styles
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'scale-105');
+            dropZone.style.boxShadow = '';
+            
+            // Add success animation
+            dropZone.classList.add('animate-drop-success');
+            dropZone.style.background = 'rgba(34, 197, 94, 0.2)';
+            
+            // Update drop zone content
+            if (draggedElement) {
+                const orderTitle = draggedElement.querySelector('.font-semibold').textContent;
+                dropZone.innerHTML = `
+                    <div class="flex items-center justify-center gap-2 text-green-700">
+                        <i data-lucide="check-circle" class="h-4 w-4"></i>
+                        <span>Scheduled: ${orderTitle}</span>
+                    </div>
+                `;
+                lucide.createIcons();
+                
+                // Remove the dragged order from its original location
+                draggedElement.style.opacity = '0.5';
+                draggedElement.style.pointerEvents = 'none';
+            }
+            
+            // Reset after animation
+            setTimeout(() => {
+                dropZone.classList.remove('animate-drop-success');
+                dropZone.style.background = '';
+            }, 600);
+        }
+
+        // Simulate capacity animations on page load
+        setTimeout(() => {
+            const capacityBars = document.querySelectorAll('.animate-capacity-fill');
+            capacityBars.forEach(bar => {
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = bar.getAttribute('style').match(/width:\s*([\d%]+)/)[1];
+                }, 100);
+            });
+        }, 500);
+    </script>
+</body>
+</html>

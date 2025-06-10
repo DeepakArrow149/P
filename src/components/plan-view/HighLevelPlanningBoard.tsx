@@ -419,6 +419,14 @@ const mockLineCapacity: LineCapacityData[] = [
   }
 ];
 
+// Planning Board Groups for line organization
+const planningBoardGroups = [
+  { id: 'group-1', name: 'High Volume Lines', lineIds: ['L1', 'L2', 'L6'] },
+  { id: 'group-2', name: 'Specialty Lines', lineIds: ['L3', 'L7'] },
+  { id: 'group-3', name: 'Finishing Lines', lineIds: ['L4', 'L8'] },
+  { id: 'group-4', name: 'Assembly Lines', lineIds: ['L5'] }
+];
+
 interface HighLevelPlanningBoardProps {
   className?: string;
 }
@@ -437,10 +445,12 @@ export function HighLevelPlanningBoard({ className }: HighLevelPlanningBoardProp
   const [unscheduledFilterBuyer, setUnscheduledFilterBuyer] = useState('all');
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [draggedOrder, setDraggedOrder] = useState<UnscheduledOrder | null>(null);
-  
-  // Bulk schedule dialog state
+    // Bulk schedule dialog state
   const [showBulkScheduleDialog, setShowBulkScheduleDialog] = useState(false);
   const [orderLineAllocations, setOrderLineAllocations] = useState<Record<string, string>>({});
+  
+  // Planning Board Group state
+  const [selectedPlanningGroup, setSelectedPlanningGroup] = useState<string>('all');
 
   // Generate weekly timeline data
   const weeklyTimelineData = useMemo(() => {
@@ -501,11 +511,24 @@ export function HighLevelPlanningBoard({ className }: HighLevelPlanningBoardProp
       return matchesBuyer && matchesStatus && matchesPriority && matchesSearch;
     });
   }, [unscheduledFilterBuyer, unscheduledFilterStatus, unscheduledFilterPriority, unscheduledSearchTerm]);
-
   // Get unique values for filters
   const uniqueBuyers = useMemo(() => [...new Set(mockStyleOrders.map(o => o.buyer))], []);
   const uniqueFactories = useMemo(() => [...new Set(mockStyleOrders.map(o => o.factory))], []);
   const uniqueUnscheduledBuyers = useMemo(() => [...new Set(mockUnscheduledOrders.map(o => o.buyer))], []);
+
+  // Filter lines based on selected planning board group
+  const filteredLineCapacity = useMemo(() => {
+    if (selectedPlanningGroup === 'all') {
+      return mockLineCapacity;
+    }
+    
+    const selectedGroup = planningBoardGroups.find(group => group.id === selectedPlanningGroup);
+    if (!selectedGroup) {
+      return mockLineCapacity;
+    }
+    
+    return mockLineCapacity.filter(line => selectedGroup.lineIds.includes(line.lineId));
+  }, [selectedPlanningGroup]);
 
   // Utility color functions
   const getPriorityColor = (priority: string) => {
@@ -544,7 +567,6 @@ export function HighLevelPlanningBoard({ className }: HighLevelPlanningBoardProp
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
   const getCapacityColor = (status: string) => {
     switch (status) {
       case 'available': return 'bg-green-100 text-green-800 border-green-200';
@@ -552,6 +574,20 @@ export function HighLevelPlanningBoard({ className }: HighLevelPlanningBoardProp
       case 'overloaded': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const getCapacityFillColor = (utilization: number) => {
+    if (utilization >= 100) return 'bg-gradient-to-r from-red-500 to-red-600';
+    if (utilization >= 75) return 'bg-gradient-to-r from-yellow-500 to-orange-500';
+    if (utilization >= 50) return 'bg-gradient-to-r from-blue-500 to-indigo-500';
+    return 'bg-gradient-to-r from-green-500 to-emerald-500';
+  };
+
+  const getCapacityIconByLevel = (utilization: number) => {
+    if (utilization >= 100) return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    if (utilization >= 75) return <TrendingUp className="h-4 w-4 text-yellow-500" />;
+    if (utilization >= 50) return <BarChart3 className="h-4 w-4 text-blue-500" />;
+    return <CheckCircle className="h-4 w-4 text-green-500" />;
   };
 
   const getMilestoneStatusIcon = (status: string) => {
@@ -1077,68 +1113,199 @@ Ready to proceed?
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Line Capacity Heatmap Tab */}
+        </TabsContent>        {/* Line Capacity Heatmap Tab */}
         <TabsContent value="capacity" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Line Capacity Heatmap
+                Line Capacity Heatmap - Enhanced Bucket Planning
               </CardTitle>
+              <CardContent className="pt-4">
+                {/* Planning Board Group Selector */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium mb-2 block">Planning Board Group</label>
+                  <Select value={selectedPlanningGroup} onValueChange={setSelectedPlanningGroup}>
+                    <SelectTrigger className="w-72">
+                      <SelectValue placeholder="Select planning board group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Lines</SelectItem>
+                      {planningBoardGroups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name} ({group.lineIds.length} lines)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedPlanningGroup !== 'all' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Showing only grouped lines. Single lines are hidden when a group is selected.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
             </CardHeader>
             <CardContent>
+              {/* Enhanced Capacity Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {mockLineCapacity.map(line => (
+                {filteredLineCapacity.map(line => (
                   <div
                     key={line.lineId}
                     className={cn(
-                      "p-4 rounded-lg border-2",
+                      "p-4 rounded-lg border-2 transition-all hover:shadow-lg",
                       getCapacityColor(line.status)
                     )}
                   >
+                    {/* Header with enhanced indicators */}
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium">{line.lineName}</h4>
-                      <Badge variant="outline">{line.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        {getCapacityIconByLevel(line.utilization)}
+                        <h4 className="font-medium">{line.lineName}</h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {line.factory}
+                        </Badge>
+                        <Badge variant="outline">{line.status}</Badge>
+                      </div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Capacity:</span>
-                        <span className="font-medium">{line.capacity}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Allocated:</span>
-                        <span className="font-medium">{line.allocated}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Utilization:</span>
-                        <span className="font-medium">{line.utilization}%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Efficiency:</span>
-                        <span className="font-medium">{line.efficiency}%</span>
+                    {/* Enhanced metrics */}
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Capacity:</span>
+                          <div className="font-medium">{line.capacity}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Allocated:</span>
+                          <div className="font-medium">{line.allocated}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Utilization:</span>
+                          <div className="font-medium flex items-center gap-1">
+                            {line.utilization}%
+                            {line.utilization >= 100 && <AlertTriangle className="h-3 w-3 text-red-500" />}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Efficiency:</span>
+                          <div className="font-medium">{line.efficiency}%</div>
+                        </div>
                       </div>
                       
-                      {/* Utilization bar */}
-                      <div className="mt-3">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className={cn(
-                              "h-2 rounded-full transition-all",
-                              line.utilization > 100 ? "bg-red-500" :
-                              line.utilization > 85 ? "bg-yellow-500" :
-                              "bg-green-500"
-                            )}
-                            style={{ width: `${Math.min(line.utilization, 100)}%` }}
-                          />
+                      {/* Enhanced Visual Capacity Indicators */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Capacity Fill</span>
+                          <span>{line.utilization}%</span>
                         </div>
+                        
+                        {/* Progressive Fill Bar with 50%, 75%, 100% markers */}
+                        <div className="relative">
+                          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all duration-500 relative",
+                                getCapacityFillColor(line.utilization)
+                              )}
+                              style={{ width: `${Math.min(line.utilization, 100)}%` }}
+                            >
+                              {/* Animated fill effect */}
+                              <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                            </div>
+                          </div>
+                          
+                          {/* Capacity Level Markers */}
+                          <div className="flex justify-between mt-1">
+                            <div className="flex flex-col items-center">
+                              <div className={cn(
+                                "w-1 h-2 rounded-full",
+                                line.utilization >= 50 ? "bg-blue-500" : "bg-gray-300"
+                              )}></div>
+                              <span className="text-xs text-muted-foreground">50%</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <div className={cn(
+                                "w-1 h-2 rounded-full",
+                                line.utilization >= 75 ? "bg-yellow-500" : "bg-gray-300"
+                              )}></div>
+                              <span className="text-xs text-muted-foreground">75%</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <div className={cn(
+                                "w-1 h-2 rounded-full",
+                                line.utilization >= 100 ? "bg-red-500" : "bg-gray-300"
+                              )}></div>
+                              <span className="text-xs text-muted-foreground">100%</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Capacity Status Indicator */}
+                        <div className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs">
+                          <span>Available:</span>
+                          <span className="font-medium">
+                            {Math.max(0, line.capacity - line.allocated)} units
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Line Type Badge */}
+                      <div className="pt-2 border-t">
+                        <Badge variant="secondary" className="text-xs">
+                          {line.lineType} • {line.unit}
+                        </Badge>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+              
+              {/* Filtered Lines Summary */}
+              {selectedPlanningGroup !== 'all' && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-900">
+                      {planningBoardGroups.find(g => g.id === selectedPlanningGroup)?.name} Summary
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700">Total Lines:</span>
+                      <div className="font-medium text-blue-900">{filteredLineCapacity.length}</div>
+                    </div>
+                    <div>
+                      <span className="text-blue-700">Total Capacity:</span>
+                      <div className="font-medium text-blue-900">
+                        {filteredLineCapacity.reduce((sum, line) => sum + line.capacity, 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-blue-700">Total Allocated:</span>
+                      <div className="font-medium text-blue-900">
+                        {filteredLineCapacity.reduce((sum, line) => sum + line.allocated, 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-blue-700">Avg Utilization:</span>
+                      <div className="font-medium text-blue-900">
+                        {Math.round(filteredLineCapacity.reduce((sum, line) => sum + line.utilization, 0) / filteredLineCapacity.length)}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {filteredLineCapacity.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Lines Found</h3>
+                  <p>No production lines match the selected planning board group.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

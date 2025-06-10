@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Archive, CalendarIcon, ChevronLeft, ChevronRight, Package, GripVertical, Edit3, SaveAll, Trash2, RotateCcw, ListChecks, ChevronDown } from 'lucide-react';
+import { Archive, CalendarIcon, ChevronLeft, ChevronRight, Package, GripVertical, Edit3, SaveAll, Trash2, RotateCcw, ListChecks, ChevronDown, Factory, Users, Target, TrendingUp, AlertTriangle, CheckCircle, Clock, Layers, Filter } from 'lucide-react';
 import { addDays, format, eachDayOfInterval, parseISO, differenceInDays } from 'date-fns';
 import type { SchedulableResource, VerticalTask, VerticalTaskDailyData, UnscheduledOrder as PlanViewUnscheduledOrder, Task } from '@/components/plan-view/types';
 import { calculateDailyProduction } from '@/lib/learningCurve';
@@ -41,7 +41,7 @@ const initialResources: SchedulableResource[] = mockLinesData.map((line: MockLin
   capacity: line.capacity || 0,
 }));
 
-// Updated mock orders for Bucket Planning
+// Enhanced mock orders with grouping and priority data for better bucket planning
 const initialBaseOrdersRaw: { 
   id: string; 
   orderNameBase: string; 
@@ -53,13 +53,103 @@ const initialBaseOrdersRaw: {
   learningCurveId: string; 
   preferredStartDate: string; 
   buyer: string; 
-  reason: string; 
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
+  complexity: 'simple' | 'medium' | 'complex';
+  groupCategory: 'volume' | 'specialty' | 'finishing' | 'assembly';
+  estimatedHours: number;
+  requirements: string[];
 }[] = [
-  { id: 'BUCKET-ORD-001', orderNameBase: 'Nike Basic Tee Run', style: 'Men\'s Basic Crew Neck T-Shirt', productType: 'Tops', quantity: 2500, requestedShipDate: format(addDays(new Date(), 28), 'yyyy-MM-dd'), imageHint: 'tshirt apparel', learningCurveId: 'lc-simple-tee', preferredStartDate: format(addDays(new Date(), 3), 'yyyy-MM-dd'), buyer: 'Nike Apparel', reason: 'Q3 Replenishment' },
-  { id: 'BUCKET-ORD-002', orderNameBase: 'Adidas Jacket Order', style: 'Women\'s Waxed Cotton Jacket', productType: 'Outerwear', quantity: 500, requestedShipDate: format(addDays(new Date(), 55), 'yyyy-MM-dd'), imageHint: 'jacket fashion', learningCurveId: 'lc-complex-jacket', preferredStartDate: format(addDays(new Date(), 8), 'yyyy-MM-dd'), buyer: 'Adidas Group', reason: 'New Collection Launch' },
-  { id: 'BUCKET-ORD-003', orderNameBase: 'Zara Polo Bulk', style: 'Men\'s Pique Polo Shirt', productType: 'Tops', quantity: 8000, requestedShipDate: format(addDays(new Date(), 40), 'yyyy-MM-dd'), imageHint: 'polo shirt', learningCurveId: 'lc-standard-polo', preferredStartDate: format(addDays(new Date(), 5), 'yyyy-MM-dd'), buyer: 'Zara (Inditex)', reason: 'High Volume Stock' },
-  { id: 'BUCKET-ORD-004', orderNameBase: 'H&M Cap Promo', style: 'Unisex Baseball Cap', productType: 'Accessories', quantity: 1200, requestedShipDate: format(addDays(new Date(), 18), 'yyyy-MM-dd'), imageHint: 'cap headwear', learningCurveId: 'lc-very-fast', preferredStartDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'), buyer: 'H&M Group', reason: 'Promotional Campaign' },
-  { id: 'BUCKET-ORD-005', orderNameBase: 'Nike Maxi Dress', style: 'Women\'s Floral Maxi Dress', productType: 'Dresses', quantity: 900, requestedShipDate: format(addDays(new Date(), 33), 'yyyy-MM-dd'), imageHint: 'dress floral', learningCurveId: 'lc-moderate-dress', preferredStartDate: format(addDays(new Date(), 6), 'yyyy-MM-dd'), buyer: 'Nike Apparel', reason: 'Summer Collection' },
+  { 
+    id: 'BUCKET-ORD-001', 
+    orderNameBase: 'Nike Basic Tee Run', 
+    style: 'Men\'s Basic Crew Neck T-Shirt', 
+    productType: 'Tops', 
+    quantity: 2500, 
+    requestedShipDate: format(addDays(new Date(), 28), 'yyyy-MM-dd'), 
+    imageHint: 'tshirt apparel', 
+    learningCurveId: 'lc-simple-tee', 
+    preferredStartDate: format(addDays(new Date(), 3), 'yyyy-MM-dd'), 
+    buyer: 'Nike Apparel', 
+    reason: 'Q3 Replenishment',
+    priority: 'high',
+    complexity: 'simple',
+    groupCategory: 'volume',
+    estimatedHours: 180,
+    requirements: ['Cotton fabric', 'Screen printing', 'Standard packaging']
+  },
+  { 
+    id: 'BUCKET-ORD-002', 
+    orderNameBase: 'Adidas Jacket Order', 
+    style: 'Women\'s Waxed Cotton Jacket', 
+    productType: 'Outerwear', 
+    quantity: 500, 
+    requestedShipDate: format(addDays(new Date(), 55), 'yyyy-MM-dd'), 
+    imageHint: 'jacket fashion', 
+    learningCurveId: 'lc-complex-jacket', 
+    preferredStartDate: format(addDays(new Date(), 8), 'yyyy-MM-dd'), 
+    buyer: 'Adidas Group', 
+    reason: 'New Collection Launch',
+    priority: 'medium',
+    complexity: 'complex',
+    groupCategory: 'specialty',
+    estimatedHours: 320,
+    requirements: ['Waxed cotton', 'Waterproof zippers', 'Custom labels']
+  },
+  { 
+    id: 'BUCKET-ORD-003', 
+    orderNameBase: 'Zara Polo Bulk', 
+    style: 'Men\'s Pique Polo Shirt', 
+    productType: 'Tops', 
+    quantity: 8000, 
+    requestedShipDate: format(addDays(new Date(), 40), 'yyyy-MM-dd'), 
+    imageHint: 'polo shirt', 
+    learningCurveId: 'lc-standard-polo', 
+    preferredStartDate: format(addDays(new Date(), 5), 'yyyy-MM-dd'), 
+    buyer: 'Zara (Inditex)', 
+    reason: 'High Volume Stock',
+    priority: 'high',
+    complexity: 'medium',
+    groupCategory: 'volume',
+    estimatedHours: 240,
+    requirements: ['Pique cotton', 'Embroidered logo', 'Bulk packaging']
+  },
+  { 
+    id: 'BUCKET-ORD-004', 
+    orderNameBase: 'H&M Cap Promo', 
+    style: 'Unisex Baseball Cap', 
+    productType: 'Accessories', 
+    quantity: 1200, 
+    requestedShipDate: format(addDays(new Date(), 18), 'yyyy-MM-dd'), 
+    imageHint: 'cap headwear', 
+    learningCurveId: 'lc-very-fast', 
+    preferredStartDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'), 
+    buyer: 'H&M Group', 
+    reason: 'Promotional Campaign',
+    priority: 'medium',
+    complexity: 'simple',
+    groupCategory: 'assembly',
+    estimatedHours: 96,
+    requirements: ['Cotton twill', 'Adjustable strap', 'Embroidered logo']
+  },
+  { 
+    id: 'BUCKET-ORD-005', 
+    orderNameBase: 'Nike Maxi Dress', 
+    style: 'Women\'s Floral Maxi Dress', 
+    productType: 'Dresses', 
+    quantity: 900, 
+    requestedShipDate: format(addDays(new Date(), 33), 'yyyy-MM-dd'), 
+    imageHint: 'dress floral', 
+    learningCurveId: 'lc-moderate-dress', 
+    preferredStartDate: format(addDays(new Date(), 6), 'yyyy-MM-dd'), 
+    buyer: 'Nike Apparel', 
+    reason: 'Summer Collection',
+    priority: 'low',
+    complexity: 'medium',
+    groupCategory: 'finishing',
+    estimatedHours: 280,
+    requirements: ['Floral print fabric', 'Elastic waistband', 'Quality finishing']
+  },
 ];
 
 
@@ -75,6 +165,45 @@ const mapRawOrdersToUnscheduled = (rawOrders: typeof initialBaseOrdersRaw): Plan
     learningCurveId: ro.learningCurveId,
     imageHint: ro.imageHint,
   }));
+};
+
+// Enhanced helper functions for grouping and styling
+const getEnhancedOrderData = (orderId: string) => {
+  return initialBaseOrdersRaw.find(order => order.id === orderId);
+};
+
+const getPriorityColor = (priority: 'high' | 'medium' | 'low') => {
+  switch (priority) {
+    case 'high': return 'bg-red-100 text-red-800 border-red-200';
+    case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'low': return 'bg-green-100 text-green-800 border-green-200';
+  }
+};
+
+const getComplexityIcon = (complexity: 'simple' | 'medium' | 'complex') => {
+  switch (complexity) {
+    case 'simple': return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case 'medium': return <Clock className="h-4 w-4 text-yellow-500" />;
+    case 'complex': return <AlertTriangle className="h-4 w-4 text-red-500" />;
+  }
+};
+
+const getGroupIcon = (groupCategory: 'volume' | 'specialty' | 'finishing' | 'assembly') => {
+  switch (groupCategory) {
+    case 'volume': return <Factory className="h-4 w-4 text-blue-500" />;
+    case 'specialty': return <Target className="h-4 w-4 text-purple-500" />;
+    case 'finishing': return <Layers className="h-4 w-4 text-orange-500" />;
+    case 'assembly': return <Users className="h-4 w-4 text-teal-500" />;
+  }
+};
+
+const getGroupColor = (groupCategory: 'volume' | 'specialty' | 'finishing' | 'assembly') => {
+  switch (groupCategory) {
+    case 'volume': return 'border-l-blue-500 bg-blue-50/50';
+    case 'specialty': return 'border-l-purple-500 bg-purple-50/50';
+    case 'finishing': return 'border-l-orange-500 bg-orange-50/50';
+    case 'assembly': return 'border-l-teal-500 bg-teal-50/50';
+  }
 };
 
 function generateVerticalTaskDailyDataWithOverflow(
@@ -224,6 +353,24 @@ export default function BucketPlanningPage() {
   const [activePlanId, setActivePlanId] = React.useState<string>(BUCKET_DEFAULT_PLAN_ID);
   const [activePlanName, setActivePlanName] = React.useState<string>(BUCKET_DEFAULT_PLAN_NAME);
   const [availablePlans, setAvailablePlans] = React.useState<BucketPlanInfo[]>([]);
+
+  // Enhanced drag & drop state
+  const [draggingOrderId, setDraggingOrderId] = React.useState<string | null>(null);
+  const [dragOverCell, setDragOverCell] = React.useState<string | null>(null);
+  
+  // Group-wise filtering state
+  const [groupFilters, setGroupFilters] = React.useState<{ [key: string]: boolean }>({
+    'volume': true,
+    'specialty': true,
+    'finishing': true,
+    'assembly': true,
+  });
+  const [expandedGroups, setExpandedGroups] = React.useState<{ [key: string]: boolean }>({
+    'volume': true,
+    'specialty': true,
+    'finishing': true,
+    'assembly': true,
+  });
 
   React.useEffect(() => {
     const storedPlans = getAvailablePlansFromStore();
@@ -392,6 +539,25 @@ export default function BucketPlanningPage() {
     return data;
   }, [displayedDates, resources, scheduledTasks]); 
 
+  // Group unscheduled orders by category
+  const groupedUnscheduledOrders = React.useMemo(() => {
+    const groups: { [key: string]: PlanViewUnscheduledOrder[] } = {
+      volume: [],
+      specialty: [],
+      finishing: [],
+      assembly: [],
+    };
+
+    unscheduledOrders.forEach(order => {
+      const enhancedData = getEnhancedOrderData(order.id);
+      if (enhancedData) {
+        groups[enhancedData.groupCategory].push(order);
+      }
+    });
+
+    return groups;
+  }, [unscheduledOrders]); 
+
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
       setCurrentStartDate(date);
@@ -408,21 +574,87 @@ export default function BucketPlanningPage() {
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, order: PlanViewUnscheduledOrder) => {
     event.dataTransfer.setData('application/json', JSON.stringify(order));
     event.dataTransfer.effectAllowed = 'move';
+    setDraggingOrderId(order.id);
+    
+    // Add smooth animation effects
+    const target = event.currentTarget;
+    if (target) {
+      target.style.transition = 'all 0.2s ease';
+      target.style.transform = 'scale(0.95) rotate(2deg)';
+      target.style.opacity = '0.8';
+      target.style.zIndex = '1000';
+    }
+  };
+
+  const handleDragEnd = (event: React.DragEvent<HTMLDivElement>) => {
+    setDraggingOrderId(null);
+    setDragOverCell(null);
+    
+    // Reset animation
+    const target = event.currentTarget;
+    if (target) {
+      target.style.transform = '';
+      target.style.opacity = '';
+      target.style.zIndex = '';
+      
+      // Add bounce effect on successful drop
+      setTimeout(() => {
+        if (target) {
+          target.style.transition = 'transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+          target.style.transform = 'scale(1.05)';
+          setTimeout(() => {
+            if (target) {
+              target.style.transform = '';
+            }
+          }, 200);
+        }
+      }, 100);
+    }
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLTableCellElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    event.currentTarget.classList.add('bg-primary/20');
+    const cellKey = `${event.currentTarget.dataset.date}-${event.currentTarget.dataset.resource}`;
+    setDragOverCell(cellKey);
+    
+    // Enhanced visual feedback
+    const target = event.currentTarget;
+    if (target) {
+      target.classList.add('bg-primary/20', 'border-primary/50', 'border-2', 'scale-105');
+      target.style.transition = 'all 0.2s ease';
+      target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
+    }
   };
 
   const handleDragLeave = (event: React.DragEvent<HTMLTableCellElement>) => {
-    event.currentTarget.classList.remove('bg-primary/20');
+    setDragOverCell(null);
+    const target = event.currentTarget;
+    if (target) {
+      target.classList.remove('bg-primary/20', 'border-primary/50', 'border-2', 'scale-105');
+      target.style.boxShadow = '';
+    }
   };
 
   const handleDrop = (event: React.DragEvent<HTMLTableCellElement>, targetDate: string, targetResourceId: string) => { 
     event.preventDefault();
-    event.currentTarget.classList.remove('bg-primary/20');
+    setDragOverCell(null);
+    
+    const target = event.currentTarget;
+    if (target) {
+      target.classList.remove('bg-primary/20', 'border-primary/50', 'border-2', 'scale-105');
+      target.style.boxShadow = '';
+      
+      // Add success animation
+      target.style.transition = 'all 0.4s ease';
+      target.style.background = 'rgba(34, 197, 94, 0.2)';
+      setTimeout(() => {
+        if (target) {
+          target.style.background = '';
+        }
+      }, 800);
+    }
+    
     const draggedOrderData = event.dataTransfer.getData('application/json');
     if (!draggedOrderData) return;
 
@@ -574,7 +806,7 @@ export default function BucketPlanningPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[120px] sticky left-0 bg-card z-10 px-4 py-3">Date</TableHead>
-                    <TableHead className="w-[150px] px-4 py-3">Resource</TableHead> 
+                    <TableHead className="w-[200px] px-4 py-3">Resource & Utilization</TableHead> 
                     <TableHead className="text-right px-4 py-3">Daily Cap. (pcs)</TableHead>
                     <TableHead className="px-4 py-3">Booked Task Part(s)</TableHead>
                     <TableHead className="px-4 py-3">Original Style(s)</TableHead>
@@ -591,10 +823,39 @@ export default function BucketPlanningPage() {
                           {format(parseISO(row.date), 'EEE, MMM dd')}
                          </TableCell>
                       )}
-                      <TableCell className="px-4 py-3">{row.resourceName}</TableCell> 
+                      <TableCell className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{row.resourceName}</span>
+                          <div className="flex-1 min-w-[60px]">
+                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full rounded-full transition-all duration-300 animate-capacity-fill",
+                                  row.totalQtyPlanned === 0 ? "bg-gray-300" :
+                                  row.balanceCapacity < 0 ? "bg-gradient-to-r from-red-500 to-red-600" :
+                                  (row.totalQtyPlanned / row.totalCapacity) >= 0.9 ? "bg-gradient-to-r from-yellow-500 to-orange-500" :
+                                  (row.totalQtyPlanned / row.totalCapacity) >= 0.5 ? "bg-gradient-to-r from-blue-500 to-indigo-500" :
+                                  "bg-gradient-to-r from-green-500 to-emerald-500"
+                                )}
+                                style={{ 
+                                  width: `${Math.min(100, (row.totalQtyPlanned / row.totalCapacity) * 100)}%` 
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-xs text-muted-foreground min-w-[35px] text-right">
+                            {Math.round((row.totalQtyPlanned / row.totalCapacity) * 100)}%
+                          </span>
+                        </div>
+                      </TableCell> 
                       <TableCell className="text-right px-4 py-3">{row.totalCapacity.toLocaleString()}</TableCell>
                       <TableCell
-                        className="max-w-[200px] truncate px-4 py-3"
+                        className={cn(
+                          "max-w-[200px] truncate px-4 py-3 transition-all duration-200",
+                          dragOverCell === `${row.date}-${row.resourceId}` ? "bg-primary/10 scale-102" : ""
+                        )}
+                        data-date={row.date}
+                        data-resource={row.resourceId}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, row.date, row.resourceId)} 
@@ -626,60 +887,281 @@ export default function BucketPlanningPage() {
         </Card>
 
         <Card className="shadow-lg lg:col-span-1">
-            <CardHeader  className="px-6 py-4">
+          <CardHeader className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <CardTitle className="flex items-center text-xl font-semibold">
-                    <Package className="mr-2 h-6 w-6 text-primary" /> Unscheduled Orders
+                  <Package className="mr-2 h-6 w-6 text-primary" /> 
+                  Unscheduled Orders
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground">Drag these orders onto the bucket plan.</CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[600px] overflow-y-auto p-4">
-                {unscheduledOrders.length > 0 ? (
-                    <div className="space-y-3">
-                        {unscheduledOrders.map(order => (
-                            <div
+                <CardDescription className="text-sm text-muted-foreground">
+                  Organized by production group. Drag orders to schedule.
+                </CardDescription>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {Object.entries(groupFilters).map(([group, enabled]) => (
+                    <DropdownMenuItem
+                      key={group}
+                      onSelect={() => setGroupFilters(prev => ({ ...prev, [group]: !enabled }))}
+                      className="flex items-center gap-2"
+                    >
+                      <input type="checkbox" checked={enabled} readOnly className="h-4 w-4" />
+                      {group.charAt(0).toUpperCase() + group.slice(1)} Production
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardHeader>
+          <CardContent className="max-h-[700px] overflow-y-auto p-4">
+            {Object.keys(groupedUnscheduledOrders).some(group => 
+              groupFilters[group] && groupedUnscheduledOrders[group].length > 0
+            ) ? (
+              <div className="space-y-4">
+                {Object.entries(groupedUnscheduledOrders).map(([groupKey, orders]) => {
+                  if (!groupFilters[groupKey] || orders.length === 0) return null;
+                  
+                  const groupName = groupKey.charAt(0).toUpperCase() + groupKey.slice(1);
+                  const isExpanded = expandedGroups[groupKey];
+                  const totalQuantity = orders.reduce((sum, order) => sum + order.quantity, 0);
+                  const avgEstimatedHours = orders.reduce((sum, order) => {
+                    const enhanced = getEnhancedOrderData(order.id);
+                    return sum + (enhanced?.estimatedHours || 0);
+                  }, 0) / orders.length;
+
+                  return (
+                    <div key={groupKey} className={cn("border-l-4 rounded-lg p-4 transition-all duration-300", getGroupColor(groupKey as any))}>
+                      <div 
+                        className="flex items-center justify-between cursor-pointer mb-3"
+                        onClick={() => setExpandedGroups(prev => ({ ...prev, [groupKey]: !isExpanded }))}
+                      >
+                        <div className="flex items-center gap-2">
+                          {getGroupIcon(groupKey as any)}
+                          <h3 className="font-semibold text-sm">{groupName} Production</h3>
+                          <Badge variant="outline" className="text-xs">{orders.length} orders</Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-muted-foreground">
+                            {totalQuantity.toLocaleString()} pcs | ~{Math.round(avgEstimatedHours)}h avg
+                          </div>
+                          <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded ? "rotate-180" : "")} />
+                        </div>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="space-y-2 animate-group-expand">
+                          {orders.map(order => {
+                            const enhancedData = getEnhancedOrderData(order.id);
+                            const isDragging = draggingOrderId === order.id;
+                            
+                            return (
+                              <div
                                 key={order.id}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, order)}
-                                className="p-3 border rounded-md shadow-sm cursor-grab bg-card hover:shadow-md active:shadow-lg active:bg-muted/50 flex items-start gap-2"
-                            >
+                                onDragEnd={handleDragEnd}
+                                className={cn(
+                                  "p-3 border rounded-lg shadow-sm cursor-grab bg-card transition-all duration-200 flex items-start gap-3",
+                                  isDragging ? "animate-drag-start" : "hover:scale-[1.02] hover:shadow-md",
+                                  "hover:border-primary/30 active:scale-95",
+                                  dragOverCell && !isDragging ? "animate-drag-hover" : ""
+                                )}
+                              >
                                 <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="font-semibold text-sm">{order.id} - {order.style}</p>
-                                    <p className="text-xs text-muted-foreground">Qty: {order.quantity.toLocaleString()}, Ship: {format(parseISO(order.requestedShipDate), 'MMM dd')}</p>
-                                    <p className="text-xs text-muted-foreground">Reason: {order.reason}</p>
-                                    {order.learningCurveId && <Badge variant="outline" className="mt-1 text-xs">LC: {mockLearningCurves.find(lc=>lc.id === order.learningCurveId)?.name || order.learningCurveId}</Badge>}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <p className="font-semibold text-sm truncate">{order.id}</p>
+                                    {enhancedData && (
+                                      <>
+                                        <Badge variant="outline" className={cn("text-xs border", getPriorityColor(enhancedData.priority))}>
+                                          {enhancedData.priority}
+                                        </Badge>
+                                        <div title={`Complexity: ${enhancedData.complexity}`}>
+                                          {getComplexityIcon(enhancedData.complexity)}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                  <p className="text-sm font-medium text-foreground mb-1 truncate">{order.style}</p>
+                                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                    <div>Qty: {order.quantity.toLocaleString()}</div>
+                                    <div>Ship: {format(parseISO(order.requestedShipDate), 'MMM dd')}</div>
+                                    {enhancedData && (
+                                      <>
+                                        <div>Hours: {enhancedData.estimatedHours}h</div>
+                                        <div>Buyer: {order.buyer}</div>
+                                      </>
+                                    )}
+                                  </div>
+                                  {enhancedData?.requirements && enhancedData.requirements.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                      {enhancedData.requirements.slice(0, 2).map((req, idx) => (
+                                        <Badge key={idx} variant="secondary" className="text-xs px-1 py-0">
+                                          {req}
+                                        </Badge>
+                                      ))}
+                                      {enhancedData.requirements.length > 2 && (
+                                        <Badge variant="secondary" className="text-xs px-1 py-0">
+                                          +{enhancedData.requirements.length - 2} more
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                  {order.learningCurveId && (
+                                    <Badge variant="outline" className="mt-2 text-xs">
+                                      LC: {mockLearningCurves.find(lc=>lc.id === order.learningCurveId)?.name || order.learningCurveId}
+                                    </Badge>
+                                  )}
                                 </div>
-                            </div>
-                        ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                ) : (
-                    <div className="text-center py-10 text-muted-foreground">
-                        <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>All orders are scheduled!</p>
-                    </div>
-                )}
-            </CardContent>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Package className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium mb-2">All orders scheduled!</p>
+                <p className="text-sm">Great job on completing the production plan.</p>
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
 
       <Card className="mt-6 shadow-lg rounded-lg">
         <CardHeader className="px-6 py-4">
-            <CardTitle className="text-lg font-semibold">Legend & Tips</CardTitle>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Visual Guide & Instructions
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 p-6">
+        <CardContent className="space-y-6 p-6">
+          {/* Status Badges */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              Capacity Status Indicators
+            </h4>
             <div className="flex flex-wrap gap-x-6 gap-y-2 items-center">
-                <div className="flex items-center gap-2"><Badge variant="secondary">Open</Badge><span>Resource has full capacity.</span></div>
-                <div className="flex items-center gap-2"><Badge variant="default">Partially Booked</Badge><span>Some capacity used.</span></div>
-                <div className="flex items-center gap-2"><Badge variant={getStatusBadgeVariant('Full')}>Full</Badge><span>Capacity fully utilized.</span></div>
-                <div className="flex items-center gap-2"><Badge variant="destructive">Overbooked</Badge><span className="text-destructive">Demand exceeds capacity!</span></div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">Open</Badge>
+                <span className="text-sm">Full capacity available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="default">Partially Booked</Badge>
+                <span className="text-sm">Some capacity used</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={getStatusBadgeVariant('Full')}>Full</Badge>
+                <span className="text-sm">Capacity fully utilized</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="destructive">Overbooked</Badge>
+                <span className="text-sm text-destructive">Demand exceeds capacity!</span>
+              </div>
             </div>
-             <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-              <li>Drag orders from "Unscheduled Orders" and drop them onto a resource's cell for a specific date.</li>
-              <li>Orders are planned considering quantity, learning curve, and resource daily capacity.</li>
-              <li>If an order cannot be fully scheduled, remaining quantity updates in the unscheduled list.</li>
+          </div>
+
+          {/* Utilization Colors */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Layers className="h-4 w-4 text-blue-500" />
+              Utilization Progress Colors
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 rounded bg-gradient-to-r from-green-500 to-emerald-500"></div>
+                <span className="text-sm">0-50% Available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 rounded bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                <span className="text-sm">50-90% Busy</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 rounded bg-gradient-to-r from-yellow-500 to-orange-500"></div>
+                <span className="text-sm">90-100% Tight</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 rounded bg-gradient-to-r from-red-500 to-red-600"></div>
+                <span className="text-sm">100%+ Overbooked</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Priority & Complexity */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4 text-purple-500" />
+              Order Priority & Complexity
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Priority Levels:</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-100 text-red-800 border-red-200">HIGH</Badge>
+                    <span className="text-xs text-muted-foreground">Urgent orders</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">MEDIUM</Badge>
+                    <span className="text-xs text-muted-foreground">Standard timeline</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-800 border-green-200">LOW</Badge>
+                    <span className="text-xs text-muted-foreground">Flexible timing</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Complexity Icons:</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-xs text-muted-foreground">Simple - Standard process</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-yellow-500" />
+                    <span className="text-xs text-muted-foreground">Medium - Some complexity</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    <span className="text-xs text-muted-foreground">Complex - Advanced process</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4 text-teal-500" />
+              How to Use
+            </h4>
+            <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+              <li>Orders are organized by production group (Volume, Specialty, Finishing, Assembly)</li>
+              <li>Drag orders from grouped sections onto resource cells for specific dates</li>
+              <li>Watch smooth animations and visual feedback during drag operations</li>
+              <li>Capacity bars show real-time utilization with color-coded status</li>
+              <li>Use filters to show/hide specific production groups</li>
+              <li>Orders consider quantity, learning curves, and daily resource capacity</li>
+              <li>Partially scheduled orders remain in unscheduled list with updated quantities</li>
             </ul>
+          </div>
         </CardContent>
-       </Card>
+      </Card>
     </>
   );
 }
