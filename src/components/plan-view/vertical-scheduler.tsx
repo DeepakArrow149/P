@@ -360,14 +360,14 @@ export function VerticalScheduler({
         <div className="flex sticky top-0 z-30 bg-card border-b">
           {/* Date Column Header */}
           <div
-            className="p-2 border-r bg-muted/50 flex items-center justify-center text-xs font-semibold sticky left-0 z-20 bg-card"
+            className="p-2 border-r bg-muted/50 flex items-center justify-center text-xs font-semibold sticky left-0 z-20"
             style={{ minWidth: DATE_COLUMN_WIDTH, width: DATE_COLUMN_WIDTH }}
           >
             Date
           </div>
           {/* Week Column Header */}
           <div
-            className="p-2 border-r bg-muted/50 flex items-center justify-center text-xs font-semibold sticky z-20 bg-card"
+            className="p-2 border-r bg-muted/50 flex items-center justify-center text-xs font-semibold sticky z-20"
             style={{ minWidth: WEEK_COLUMN_WIDTH, width: WEEK_COLUMN_WIDTH, left: DATE_COLUMN_WIDTH }}
            >
             Week
@@ -399,27 +399,27 @@ export function VerticalScheduler({
         <ScrollArea className="flex-grow" ref={scrollAreaRef}>
           <div ref={gridContentRef} className="relative" style={{ height: dates.length * DATE_CELL_HEIGHT }}>
             {/* Sticky Date and Week Columns - Background */}
-            <div className="absolute top-0 left-0 z-10 bg-card flex flex-col" style={{width: STICKY_HEADER_WIDTH}}>
+            <div className="absolute top-0 left-0 z-10 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex flex-col shadow-lg" style={{width: STICKY_HEADER_WIDTH}}>
               {dates.map((date, dateIndex) => {
                 const isPast = isPastDay(date);
                 const holidayInfo = getHolidayInfo(date);
                 return (
                 <div
                   key={dateIndex}
-                  className={cn("flex border-b",
-                    isPast ? "bg-slate-100 opacity-80" :
-                    (holidayInfo?.type === 'full' ? "bg-rose-100 dark:bg-rose-800/40" :
-                    (holidayInfo ? "bg-amber-100 dark:bg-amber-800/30" : ""))
+                  className={cn("flex border-b border-slate-200 dark:border-slate-700",
+                    isPast ? "bg-slate-200 dark:bg-slate-700 opacity-70" :
+                    (holidayInfo?.type === 'full' ? "bg-gradient-to-r from-rose-100 to-rose-200 dark:from-rose-800/40 dark:to-rose-700/40" :
+                    (holidayInfo ? "bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-800/30 dark:to-amber-700/30" : ""))
                   )}
                   style={{ height: DATE_CELL_HEIGHT }}
                 >
                     {/* Date Cell */}
                     <div
                       className={cn(
-                        "p-2 border-r text-center text-xs h-full flex items-center justify-center sticky left-0",
-                        isPast ? "bg-slate-200 text-slate-500" :
-                        (holidayInfo?.type === 'full' ? "text-rose-700 dark:text-rose-300" :
-                        (holidayInfo ? "text-amber-700 dark:text-amber-300" : "bg-blue-100 text-blue-800"))
+                        "p-2 border-r border-slate-200 dark:border-slate-700 text-center text-xs h-full flex items-center justify-center sticky left-0 font-semibold",
+                        isPast ? "bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-400" :
+                        (holidayInfo?.type === 'full' ? "text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30" :
+                        (holidayInfo ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30" : "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/50 dark:to-blue-800/50 text-blue-800 dark:text-blue-200"))
                       )}
                       style={{ minWidth: DATE_COLUMN_WIDTH, width: DATE_COLUMN_WIDTH }}
                       title={holidayInfo ? `Holiday: ${holidayInfo.type}` : undefined}
@@ -432,10 +432,10 @@ export function VerticalScheduler({
                     {/* Week Cell */}
                     <div
                       className={cn(
-                        "p-2 border-r text-center text-xs h-full flex items-center justify-center sticky",
-                         isPast ? "bg-slate-200 text-slate-500" :
-                        (holidayInfo?.type === 'full' ? "text-rose-700 dark:text-rose-300" :
-                        (holidayInfo ? "text-amber-700 dark:text-amber-300" : "bg-blue-100 text-blue-800"))
+                        "p-2 border-r border-slate-200 dark:border-slate-700 text-center text-xs h-full flex items-center justify-center sticky font-semibold",
+                         isPast ? "bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-400" :
+                        (holidayInfo?.type === 'full' ? "text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30" :
+                        (holidayInfo ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30" : "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/50 dark:to-blue-800/50 text-blue-800 dark:text-blue-200"))
                       )}
                       style={{ minWidth: WEEK_COLUMN_WIDTH, width: WEEK_COLUMN_WIDTH, left: DATE_COLUMN_WIDTH }}
                     >
@@ -549,32 +549,29 @@ export function VerticalScheduler({
                         }
 
                         return (
-                          <DropdownMenu
-                            key={task.id + resource.id}
-                            open={activeContextMenuTask?.id === task.id && activeContextMenuTask?.resourceId === resource.id}
-                            onOpenChange={(isOpen) => handleOpenChange(isOpen, task)}
-                          >
-                            <DropdownMenuTrigger asChild>
-                              <div
-                                draggable
-                                onDragStart={(e) => handleTaskDragStart(e, task, resource.id)}
-                                onContextMenu={(e) => handleContextMenu(e, task)}
-                                className={cn(
-                                  "absolute left-px right-px rounded shadow-md cursor-grab flex overflow-hidden border border-black/20",
-                                  task.displayColor || task.color || 'bg-slate-800 text-white'
+                          <>
+                            <div
+                              key={`drag-${task.id}-${resource.id}`}
+                              draggable
+                              onDragStart={(e) => handleTaskDragStart(e, task, resource.id)}
+                              onContextMenu={(e) => handleContextMenu(e, task)}
+                              className={cn(
+                                  "absolute left-px right-px rounded-lg shadow-lg hover:shadow-xl ui-transition-normal cursor-grab flex overflow-hidden border-2 border-white/30 ui-hover-primary active:scale-95",
+                                  task.displayColor || task.color || 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white'
                                 )}
                                 style={{
                                   top: topOffset,
                                   height: blockHeight,
                                   zIndex: 10,
+                                  background: task.displayColor || task.color ? undefined : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                 }}
                               >
                                 {/* Style Sub-column */}
                                 <div
-                                  className="flex flex-col items-center justify-between p-1 border-r border-white/20"
+                                  className="flex flex-col items-center justify-between p-1 border-r border-white/30"
                                   style={{width: STYLE_SUBCOLUMN_WIDTH}}
                                 >
-                                  <div className="[writing-mode:vertical-rl] transform rotate-180 text-xs font-semibold whitespace-nowrap p-0.5 self-center leading-tight mt-1" title={task.orderName}>
+                                  <div className="[writing-mode:vertical-rl] transform rotate-180 text-xs font-bold whitespace-nowrap p-0.5 self-center leading-tight mt-1 drop-shadow-sm" title={task.orderName}>
                                     {task.orderName}
                                   </div>
                                   {task.imageHint && (
@@ -583,11 +580,11 @@ export function VerticalScheduler({
                                         alt={task.imageHint}
                                         width={Math.min(50, STYLE_SUBCOLUMN_WIDTH - 10)}
                                         height={Math.min(50, STYLE_SUBCOLUMN_WIDTH - 10)}
-                                        className="my-1 rounded object-cover"
+                                        className="my-1 rounded-md object-cover shadow-md"
                                         data-ai-hint={task.imageHint}
                                       />
                                   )}
-                                  <div className="text-[10px] mt-auto p-0.5 truncate" title={task.originalOrderDetails?.style || task.orderName}>
+                                  <div className="text-[10px] mt-auto p-0.5 truncate font-semibold drop-shadow-sm" title={task.originalOrderDetails?.style || task.orderName}>
                                       {task.originalOrderDetails?.style || task.orderName}
                                   </div>
                                 </div>
@@ -597,19 +594,35 @@ export function VerticalScheduler({
                                   {visibleDailyData.map((daily, idx) => (
                                       <div
                                         key={idx}
-                                        className="flex text-[10px] border-b border-white/20 last:border-b-0"
+                                        className="flex text-[10px] border-b border-white/30 last:border-b-0 font-semibold"
                                         style={{height: DATE_CELL_HEIGHT}}
                                         title={`Date: ${daily.date}\nPlanned: ${daily.plannedQty}\nEfficiency: ${daily.efficiency?.toFixed(1)}%\nCumulative: ${daily.cumulativeQty}`}
                                       >
-                                        <div className="w-1/2 p-1 border-r border-white/20 flex items-center justify-center">{daily.plannedQty}</div>
-                                        <div className="w-1/2 p-1 flex items-center justify-center">{daily.cumulativeQty}</div>
+                                        <div className="w-1/2 p-1 border-r border-white/30 flex items-center justify-center drop-shadow-sm">{daily.plannedQty}</div>
+                                        <div className="w-1/2 p-1 flex items-center justify-center drop-shadow-sm">{daily.cumulativeQty}</div>
                                       </div>
                                     )
                                   )}
                                 </div>
                               </div>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-64">
+
+                            <DropdownMenu
+                              key={`menu-${task.id}-${resource.id}`}
+                              open={activeContextMenuTask?.id === task.id && activeContextMenuTask?.resourceId === resource.id}
+                              onOpenChange={(isOpen) => handleOpenChange(isOpen, task)}
+                            >
+                              <DropdownMenuTrigger asChild>
+                                <div style={{ 
+                                  position: 'absolute', 
+                                  top: topOffset,
+                                  left: '1px',
+                                  right: '1px',
+                                  height: blockHeight,
+                                  pointerEvents: 'none',
+                                  opacity: 0
+                                }} />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-64">
                                 <DropdownMenuLabel>Order Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuGroup>
@@ -767,7 +780,8 @@ export function VerticalScheduler({
                                     <span>Exit</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
-                          </DropdownMenu>
+                            </DropdownMenu>
+                          </>
                         );
                       })}
                   </div>

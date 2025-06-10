@@ -4,21 +4,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ui-transition-normal ui-focus-ring",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "border-transparent bg-primary text-primary-foreground ui-hover-secondary",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-secondary text-secondary-foreground ui-hover-secondary",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+          "border-transparent bg-destructive text-destructive-foreground ui-hover-secondary",
         outline: "text-foreground",
         // Variants for hourly breakup status
-        working: "border-transparent bg-green-500 text-white hover:bg-green-600",
-        break: "border-transparent bg-yellow-400 text-black hover:bg-yellow-500",
-        off: "border-transparent bg-muted text-muted-foreground hover:bg-muted/80",
+        working: "border-transparent bg-green-500 text-white ui-hover-secondary",
+        break: "border-transparent bg-yellow-400 text-black ui-hover-secondary",
+        off: "border-transparent bg-muted text-muted-foreground ui-hover-secondary",
       },
       size: { // Added size variants for more control
         default: "px-2.5 py-0.5 text-xs",

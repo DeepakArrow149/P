@@ -49,6 +49,25 @@
     --sidebar-accent-foreground: 0 0% 95%; /* Light text on sidebar accent hover */
     --sidebar-border: 240 4% 22%; /* Border color for sidebar elements */
     --sidebar-ring: 174 44% 65%; /* Ring color for focus states within sidebar */
+    
+    /* UI Consistency Design Tokens */
+    --ui-transition-fast: 150ms;
+    --ui-transition-normal: 200ms;
+    --ui-transition-slow: 300ms;
+    
+    --ui-opacity-hover: 0.9;
+    --ui-opacity-hover-secondary: 0.8;
+    --ui-opacity-hover-subtle: 0.5;
+    --ui-opacity-disabled: 0.5;
+    --ui-opacity-overlay: 0.8;
+    
+    --ui-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --ui-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --ui-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --ui-shadow-focus: 0 0 0 2px rgb(59 130 246 / 0.5);
+    
+    --ui-ring-width: 2px;
+    --ui-ring-offset: 2px;
   }
 
   .dark {
@@ -103,5 +122,61 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Standardized UI Component Utilities */
+  .ui-hover-primary {
+    transition: opacity var(--ui-transition-normal) ease-in-out;
+  }
+  .ui-hover-primary:hover {
+    opacity: var(--ui-opacity-hover);
+  }
+  
+  .ui-hover-secondary {
+    transition: opacity var(--ui-transition-normal) ease-in-out;
+  }
+  .ui-hover-secondary:hover {
+    opacity: var(--ui-opacity-hover-secondary);
+  }
+  
+  .ui-hover-subtle {
+    transition: opacity var(--ui-transition-normal) ease-in-out;
+  }
+  .ui-hover-subtle:hover {
+    opacity: var(--ui-opacity-hover-subtle);
+  }
+  
+  .ui-transition-fast {
+    transition: all var(--ui-transition-fast) ease-in-out;
+  }
+  
+  .ui-transition-normal {
+    transition: all var(--ui-transition-normal) ease-in-out;
+  }
+  
+  .ui-transition-slow {
+    transition: all var(--ui-transition-slow) ease-in-out;
+  }
+  
+  .ui-focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+  
+  .ui-shadow-interactive {
+    box-shadow: var(--ui-shadow-sm);
+    transition: box-shadow var(--ui-transition-normal) ease-in-out;
+  }
+  .ui-shadow-interactive:hover {
+    box-shadow: var(--ui-shadow-md);
+  }
+  
+  .ui-disabled {
+    @apply disabled:pointer-events-none aria-disabled:pointer-events-none;
+  }
+  .ui-disabled:disabled,
+  .ui-disabled[aria-disabled="true"] {
+    opacity: var(--ui-opacity-disabled);
   }
 }

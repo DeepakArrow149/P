@@ -1,0 +1,47 @@
+{
+  // Disable CSS validation for Tailwind directives
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+
+  // Enable Tailwind CSS IntelliSense
+  "tailwindCSS.includeLanguages": {
+    "typescript": "typescript",
+    "javascript": "javascript",
+    "typescriptreact": "typescriptreact",
+    "javascriptreact": "javascriptreact"
+  },
+
+  // Configure Tailwind CSS class detection
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "ngClass"
+  ],
+
+  // Enable Tailwind CSS suggestions
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+
+  // Configure CSS custom data to recognize Tailwind directives
+  "css.customData": [".vscode/tailwind.json"],
+
+  // Additional VS Code settings for better development experience
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  // File associations for better Tailwind support
+  "files.associations": {
+    "*.css": "postcss"
+  },
+
+  // PostCSS language configuration
+  "postcss.validate": false,
+  
+  // Emmet configuration for better class completion
+  "emmet.includeLanguages": {
+    "postcss": "css"
+  }
+}

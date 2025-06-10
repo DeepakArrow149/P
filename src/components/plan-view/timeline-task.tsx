@@ -288,31 +288,42 @@ export function TimelineTask({
 
   return (
     <>
+      <div
+        draggable
+        onDragStart={handleDragStart}
+        onContextMenu={handleContextMenu} 
+        className={cn(
+          "absolute rounded-lg overflow-hidden border-2 border-white/30 ui-shadow-interactive ui-transition-normal flex items-center justify-center p-1 cursor-grab ui-hover-primary active:cursor-grabbing active:scale-95",
+          task.displayColor || task.color || 'bg-gradient-to-br from-sky-500 to-sky-600 text-white'
+        )}
+        style={{
+          left: `${left}px`,
+          width: `${width}px`,
+          height: `${height}px`,
+          top: `${topMargin}px`,
+          zIndex: 10,
+          background: task.displayColor || task.color ? undefined : 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+        }}
+        title={titleText.replace(/\\n/g, '\n')}
+      >
+        <span
+          className={`truncate text-[10px] px-1 py-0.5 rounded-sm select-none font-semibold drop-shadow-sm`}
+        >
+          {displayLabel}
+        </span>
+      </div>
+
       <DropdownMenu open={isMenuOpen} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
-          <div
-            draggable
-            onDragStart={handleDragStart}
-            onContextMenu={handleContextMenu} 
-            className={cn(
-              "absolute rounded overflow-hidden border border-black/20 shadow-sm flex items-center justify-center p-1 cursor-grab hover:opacity-80 active:cursor-grabbing",
-              task.displayColor || task.color || 'bg-slate-700 text-white'
-            )}
-            style={{
-              left: `${left}px`,
-              width: `${width}px`,
-              height: `${height}px`,
-              top: `${topMargin}px`,
-              zIndex: 10,
-            }}
-            title={titleText.replace(/\\n/g, '\n')}
-          >
-            <span
-              className={`truncate text-[10px] px-1 py-0.5 rounded-sm select-none`}
-            >
-              {displayLabel}
-            </span>
-          </div>
+          <div style={{ 
+            position: 'absolute', 
+            left: `${left}px`, 
+            top: `${topMargin}px`, 
+            width: `${width}px`, 
+            height: `${height}px`,
+            pointerEvents: 'none',
+            opacity: 0
+          }} />
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-64">
           <DropdownMenuLabel>Order Actions</DropdownMenuLabel>

@@ -208,28 +208,28 @@ export class OrderRepository {  // Create a new order with all related data
       connection.release();
     }
   }
-  
-  // Get all orders with related data
+    // Get all orders with related data
   static async findAll(): Promise<CompleteOrderData[]> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    const query = `
-      SELECT 
-        o.*,
-        dd.id as delivery_id, dd.delivery_date, dd.quantity as delivery_quantity, dd.reference as delivery_reference,
-        pl.id as po_line_id, pl.so_no, pl.po_name, pl.delivery_date as po_delivery_date, pl.country, pl.extra_percentage,
-        sq.id as size_qty_id, sq.size_name, sq.quantity as size_quantity
-      FROM orders o
-      LEFT JOIN delivery_details dd ON o.id = dd.order_id
-      LEFT JOIN po_lines pl ON o.id = pl.order_id
-      LEFT JOIN size_quantities sq ON pl.id = sq.po_line_id
-      ORDER BY o.created_at DESC, dd.delivery_date, pl.delivery_date
-    `;
-    
-    const [rows] = await connection.execute<RowDataPacket[]>(query);
-    
-    // Group the results by order
-    const ordersMap = new Map<string, CompleteOrderData>();
+    try {
+      const query = `
+        SELECT 
+          o.*,
+          dd.id as delivery_id, dd.delivery_date, dd.quantity as delivery_quantity, dd.reference as delivery_reference,
+          pl.id as po_line_id, pl.so_no, pl.po_name, pl.delivery_date as po_delivery_date, pl.country, pl.extra_percentage,
+          sq.id as size_qty_id, sq.size_name, sq.quantity as size_quantity
+        FROM orders o
+        LEFT JOIN delivery_details dd ON o.id = dd.order_id
+        LEFT JOIN po_lines pl ON o.id = pl.order_id
+        LEFT JOIN size_quantities sq ON pl.id = sq.po_line_id
+        ORDER BY o.created_at DESC, dd.delivery_date, pl.delivery_date
+      `;      
+      const [rows] = await connection.execute<RowDataPacket[]>(query);
+      
+      // Group the results by order
+      const ordersMap = new Map<string, CompleteOrderData>();
     
     rows.forEach(row => {
       if (!ordersMap.has(row.id)) {
@@ -318,26 +318,29 @@ export class OrderRepository {  // Create a new order with all related data
             size_name: row.size_name,
             quantity: row.size_quantity,
           });
-        }
-      }
-    });
-    
+        }      }
+    });    
     return Array.from(ordersMap.values());
+    } finally {
+      connection.release(); 
+    }
   }
   
   // Get order by ID
   static async findById(id: string): Promise<CompleteOrderData | null> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    const query = `
-      SELECT 
-        o.*,
-        dd.id as delivery_id, dd.delivery_date, dd.quantity as delivery_quantity, dd.reference as delivery_reference,
-        pl.id as po_line_id, pl.so_no, pl.po_name, pl.delivery_date as po_delivery_date, pl.country, pl.extra_percentage,
-        sq.id as size_qty_id, sq.size_name, sq.quantity as size_quantity
-      FROM orders o
-      LEFT JOIN delivery_details dd ON o.id = dd.order_id
-      LEFT JOIN po_lines pl ON o.id = pl.order_id
+    try {
+      const query = `
+        SELECT 
+          o.*,
+          dd.id as delivery_id, dd.delivery_date, dd.quantity as delivery_quantity, dd.reference as delivery_reference,
+          pl.id as po_line_id, pl.so_no, pl.po_name, pl.delivery_date as po_delivery_date, pl.country, pl.extra_percentage,
+          sq.id as size_qty_id, sq.size_name, sq.quantity as size_quantity
+        FROM orders o
+        LEFT JOIN delivery_details dd ON o.id = dd.order_id
+        LEFT JOIN po_lines pl ON o.id = pl.order_id
       LEFT JOIN size_quantities sq ON pl.id = sq.po_line_id
       WHERE o.id = ?
       ORDER BY dd.delivery_date, pl.delivery_date
@@ -439,46 +442,53 @@ export class OrderRepository {  // Create a new order with all related data
         }
       }
     });
-    
-    order.deliveryDetails = Array.from(deliveryDetailsMap.values());
+      order.deliveryDetails = Array.from(deliveryDetailsMap.values());
     order.poLines = Array.from(poLinesMap.values());
     
     return order;
-  }
-  
-  // Update order status
-  static async updateStatus(id: string, status: OrderData['status']): Promise<void> {
-    const connection = await getConnection();
-    
-    const [result] = await connection.execute<ResultSetHeader>(
-      'UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [status, id]
-    );
-    
-    if (result.affectedRows === 0) {
-      throw new Error('Order not found');
+    } finally {
+      connection.release();
     }
   }
-  
-  // Get unscheduled orders
+    // Update order status
+  static async updateStatus(id: string, status: OrderData['status']): Promise<void> {
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
+    
+    try {
+      const [result] = await connection.execute<ResultSetHeader>(
+        'UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [status, id]
+      );
+      
+      if (result.affectedRows === 0) {
+        throw new Error('Order not found');
+      }
+    } finally {
+      connection.release();
+    }
+  }
+    // Get unscheduled orders
   static async findUnscheduled(): Promise<CompleteOrderData[]> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    const query = `
-      SELECT 
-        o.*,
-        dd.id as delivery_id, dd.delivery_date, dd.quantity as delivery_quantity, dd.reference as delivery_reference,
-        pl.id as po_line_id, pl.so_no, pl.po_name, pl.delivery_date as po_delivery_date, pl.country, pl.extra_percentage,
-        sq.id as size_qty_id, sq.size_name, sq.quantity as size_quantity
-      FROM orders o
-      LEFT JOIN delivery_details dd ON o.id = dd.order_id
-      LEFT JOIN po_lines pl ON o.id = pl.order_id
-      LEFT JOIN size_quantities sq ON pl.id = sq.po_line_id
-      WHERE o.status IN ('unscheduled', 'provisional')
-      ORDER BY o.created_at DESC, dd.delivery_date, pl.delivery_date
-    `;
-    
-    const [rows] = await connection.execute<RowDataPacket[]>(query);
+    try {
+      const query = `
+        SELECT 
+          o.*,
+          dd.id as delivery_id, dd.delivery_date, dd.quantity as delivery_quantity, dd.reference as delivery_reference,
+          pl.id as po_line_id, pl.so_no, pl.po_name, pl.delivery_date as po_delivery_date, pl.country, pl.extra_percentage,
+          sq.id as size_qty_id, sq.size_name, sq.quantity as size_quantity
+        FROM orders o
+        LEFT JOIN delivery_details dd ON o.id = dd.order_id
+        LEFT JOIN po_lines pl ON o.id = pl.order_id
+        LEFT JOIN size_quantities sq ON pl.id = sq.po_line_id
+        WHERE o.status IN ('unscheduled', 'provisional')
+        ORDER BY o.created_at DESC, dd.delivery_date, pl.delivery_date
+      `;
+      
+      const [rows] = await connection.execute<RowDataPacket[]>(query);
     
     // Group the results by order (same logic as findAll)
     const ordersMap = new Map<string, CompleteOrderData>();
@@ -571,10 +581,13 @@ export class OrderRepository {  // Create a new order with all related data
             quantity: row.size_quantity,
           });
         }
-      }
-    });
+      }    });
     
-    return Array.from(ordersMap.values());  }
+    return Array.from(ordersMap.values());
+    } finally {
+      connection.release();
+    }
+  }
   
   // Delete order
   static async delete(id: string): Promise<boolean> {

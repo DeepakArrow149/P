@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+// Removed Form imports - using simple labels instead
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -160,25 +160,25 @@ export function ProductionUpdateDialog({
                   <div className="font-semibold">Allocated: {stage.allocatedQty.toLocaleString()}</div>
                   <div className="lg:col-span-2"></div> {/* Spacer */}
                   
-                  <FormItem>
-                    <FormLabel>Updated Qty</FormLabel>
+                  <div>
+                    <Label className="text-xs">Updated Qty</Label>
                     <Input type="number" value={stage.updatedQty} onChange={(e) => handleStageChange(index, 'updatedQty', e.target.value)} className="h-8 text-xs" />
-                  </FormItem>
-                  <FormItem>
-                    <FormLabel>Group</FormLabel>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Group</Label>
                     <Input value={stage.group} onChange={(e) => handleStageChange(index, 'group', e.target.value)} className="h-8 text-xs" />
-                  </FormItem>
-                  <FormItem>
-                    <FormLabel>Row/Line</FormLabel>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Row/Line</Label>
                     <Input value={stage.row} onChange={(e) => handleStageChange(index, 'row', e.target.value)} className="h-8 text-xs" />
-                  </FormItem>
-                  <FormItem>
-                    <FormLabel>Rejects</FormLabel>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Rejects</Label>
                     <Input type="number" value={stage.rejects} onChange={(e) => handleStageChange(index, 'rejects', e.target.value)} className="h-8 text-xs" />
-                  </FormItem>
+                  </div>
                   
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Target Date</FormLabel>
+                  <div className="flex flex-col">
+                    <Label className="text-xs">Target Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant={'outline'} size="sm" className={cn("h-8 text-xs justify-start", !stage.targetDate && "text-muted-foreground")}>
@@ -188,9 +188,9 @@ export function ProductionUpdateDialog({
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={stage.targetDate || undefined} onSelect={(date) => handleStageChange(index, 'targetDate', date)} /></PopoverContent>
                     </Popover>
-                  </FormItem>
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Actual Date</FormLabel>
+                  </div>
+                  <div className="flex flex-col">
+                    <Label className="text-xs">Actual Date</Label>
                      <Popover>
                       <PopoverTrigger asChild>
                         <Button variant={'outline'} size="sm" className={cn("h-8 text-xs justify-start", !stage.actualDate && "text-muted-foreground")}>
@@ -200,15 +200,15 @@ export function ProductionUpdateDialog({
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={stage.actualDate || undefined} onSelect={(date) => handleStageChange(index, 'actualDate', date)} /></PopoverContent>
                     </Popover>
-                  </FormItem>
-                   <FormItem className="flex items-center space-x-2 pt-5 lg:col-start-3">
+                  </div>
+                   <div className="flex items-center space-x-2 pt-5 lg:col-start-3">
                       <Checkbox id={`complete-${index}`} checked={stage.isComplete} onCheckedChange={(checked) => handleStageChange(index, 'isComplete', !!checked)} />
                       <Label htmlFor={`complete-${index}`} className="text-xs">Mark as Complete</Label>
-                   </FormItem>
-                  <FormItem className="lg:col-span-4">
-                    <FormLabel>Comments</FormLabel>
+                   </div>
+                  <div className="lg:col-span-4">
+                    <Label className="text-xs">Comments</Label>
                     <Textarea value={stage.comments} onChange={(e) => handleStageChange(index, 'comments', e.target.value)} className="text-xs min-h-[40px]" rows={1} />
-                  </FormItem>
+                  </div>
                 </CardContent>
               </Card>
             ))}

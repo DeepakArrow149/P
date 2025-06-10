@@ -29,8 +29,7 @@ import { getAllLearningCurvesFromFirebase } from '@/lib/firebaseService';
 import type { LearningCurveMaster } from '@/lib/learningCurveTypes';
 import { PoSizeTable } from '@/components/order-form/PoSizeTable';
 
-// Schemas for nested structures
-const deliveryDetailSchema = z.object({
+export const deliveryDetailSchema = z.object({
   id: z.string(),
   deliveryDate: z.date({ required_error: "Delivery date is required." }),
   quantity: z.coerce.number().min(0, "Quantity must be at least 0.").default(0),
@@ -56,7 +55,7 @@ export const poLineSchema = z.object({
 export type PoLine = z.infer<typeof poLineSchema>;
 
 
-const newOrderFormSchema = z.object({
+export const newOrderFormSchema = z.object({
   // Top Level Date Fields
   orderDate: z.date().optional(),
   receivedDate: z.date().optional(),

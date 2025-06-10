@@ -69,6 +69,24 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)'
       },
+      opacity: {
+        hover: '0.9',
+        'hover-secondary': '0.8',
+        'hover-subtle': '0.5',
+        disabled: '0.5',
+        overlay: '0.8'
+      },
+      transitionDuration: {
+        'ui-fast': '150ms',
+        'ui-normal': '200ms', 
+        'ui-slow': '300ms'
+      },
+      boxShadow: {
+        'ui-sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'ui-md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        'ui-lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+        'ui-focus': '0 0 0 2px rgb(59 130 246 / 0.5)'
+      },
       keyframes: {
         'accordion-down': {
           from: {

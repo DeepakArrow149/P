@@ -58,10 +58,18 @@ const LOCALSTORAGE_KEY_HORIZONTAL_ZOOM_LEVEL = 'trackTechHorizontalZoomLevel_v1'
 const LOCALSTORAGE_KEY_CALENDARS_DATA = 'trackTech_calendarsData_v2';
 
 const ROTATION_COLORS = [
-  'bg-sky-500 text-white', 'bg-emerald-500 text-white', 'bg-amber-500 text-black',
-  'bg-rose-500 text-white', 'bg-fuchsia-500 text-white', 'bg-indigo-500 text-white',
-  'bg-lime-500 text-black', 'bg-cyan-500 text-white', 'bg-orange-500 text-white',
-  'bg-violet-500 text-white', 'bg-teal-500 text-white', 'bg-pink-500 text-white',
+  'bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-sky-500/25', 
+  'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-500/25', 
+  'bg-gradient-to-br from-amber-500 to-amber-600 text-black shadow-amber-500/25',
+  'bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-rose-500/25', 
+  'bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 text-white shadow-fuchsia-500/25', 
+  'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-500/25',
+  'bg-gradient-to-br from-lime-500 to-lime-600 text-black shadow-lime-500/25', 
+  'bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-cyan-500/25', 
+  'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-orange-500/25',
+  'bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-violet-500/25', 
+  'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-teal-500/25', 
+  'bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-pink-500/25',
 ];
 
 // Helper functions moved to module scope

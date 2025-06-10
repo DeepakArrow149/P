@@ -58,14 +58,15 @@ export interface UpdateLineCapacityData {
   isActive?: boolean;
 }
 
-export class LineCapacityRepository {
-  /**
+export class LineCapacityRepository {  /**
    * Initialize database table for line capacity
    */
   async createTable(): Promise<void> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    const createTableQuery = `
+    try {
+      const createTableQuery = `
       CREATE TABLE IF NOT EXISTS line_capacities (
         id INT PRIMARY KEY AUTO_INCREMENT,
         line_id VARCHAR(50) NOT NULL,
@@ -99,76 +100,83 @@ export class LineCapacityRepository {
         CONSTRAINT chk_working_hours_positive CHECK (working_hours > 0),
         CONSTRAINT chk_efficiency_range CHECK (efficiency > 0 AND efficiency <= 200),
         CONSTRAINT chk_effective_dates CHECK (effective_to IS NULL OR effective_to >= effective_from)
-      ) ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `;
+      ) ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;    `;
     
     await connection.execute(createTableQuery);
+    } finally {
+      connection.release();
+    }
   }
-
   /**
    * Create a new line capacity record
    */
   async createLineCapacity(data: CreateLineCapacityData): Promise<LineCapacity> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    // Validate data
-    if (data.sam <= 0) {
-      throw new Error('SAM must be positive');
-    }
-    if (data.operators <= 0) {
-      throw new Error('Operators must be positive');
-    }
-    if (data.workingHours <= 0) {
-      throw new Error('Working hours must be positive');
-    }
-    if (data.efficiency < 1 || data.efficiency > 200) {
-      throw new Error('Efficiency must be between 1% and 200%');
-    }
+    try {
+      // Validate data
+      if (data.sam <= 0) {
+        throw new Error('SAM must be positive');
+      }
+      if (data.operators <= 0) {
+        throw new Error('Operators must be positive');
+      }
+      if (data.workingHours <= 0) {
+        throw new Error('Working hours must be positive');
+      }
+      if (data.efficiency < 1 || data.efficiency > 200) {
+        throw new Error('Efficiency must be between 1% and 200%');
+      }
 
-    const effectiveFrom = data.effectiveFrom || new Date();
+      const effectiveFrom = data.effectiveFrom || new Date();
 
-    const [result] = await connection.execute<ResultSetHeader>(
-      `INSERT INTO line_capacities 
-       (line_id, order_no, buyer, style_no, garment_description, sam, operators, working_hours, efficiency, effective_from, effective_to)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.lineId,
-        data.orderNo || null,
-        data.buyer || null,
-        data.styleNo || null,
-        data.garmentDescription || null,
-        data.sam,
-        data.operators,
-        data.workingHours,
-        data.efficiency,
-        effectiveFrom,
-        data.effectiveTo || null
-      ]
-    );
+      const [result] = await connection.execute<ResultSetHeader>(
+        `INSERT INTO line_capacities 
+         (line_id, order_no, buyer, style_no, garment_description, sam, operators, working_hours, efficiency, effective_from, effective_to)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          data.lineId,
+          data.orderNo || null,
+          data.buyer || null,
+          data.styleNo || null,
+          data.garmentDescription || null,
+          data.sam,
+          data.operators,
+          data.workingHours,
+          data.efficiency,
+          effectiveFrom,
+          data.effectiveTo || null
+        ]
+      );
 
-    // Fetch the created line capacity
-    const created = await this.getLineCapacityById(result.insertId);
-    if (!created) {
-      throw new Error('Failed to retrieve created line capacity');
+      // Fetch the created line capacity
+      const created = await this.getLineCapacityById(result.insertId);
+      if (!created) {
+        throw new Error('Failed to retrieve created line capacity');
+      }
+
+      return created;
+    } finally {
+      connection.release();
     }
-
-    return created;
   }
-
   /**
    * Get all line capacities with optional filtering
    */
   async getLineCapacities(filters?: LineCapacityFilters): Promise<LineCapacity[]> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    let query = `
-      SELECT id, line_id, order_no, buyer, style_no, garment_description, 
-             sam, operators, working_hours, efficiency, daily_capacity,
-             effective_from, effective_to, is_active, created_at, updated_at
-      FROM line_capacities
-      WHERE 1=1
-    `;
-    const params: any[] = [];
+    try {
+      let query = `
+        SELECT id, line_id, order_no, buyer, style_no, garment_description, 
+               sam, operators, working_hours, efficiency, daily_capacity,
+               effective_from, effective_to, is_active, created_at, updated_at
+        FROM line_capacities
+        WHERE 1=1
+      `;
+      const params: any[] = [];
 
     // Apply filters
     if (filters?.active !== undefined) {
@@ -201,75 +209,85 @@ export class LineCapacityRepository {
     if (filters?.effectiveDate) {
       query += ` AND effective_from <= ? AND (effective_to IS NULL OR effective_to >= ?)`;
       params.push(filters.effectiveDate, filters.effectiveDate);
-    }
-
-    query += ' ORDER BY created_at DESC';
+    }    query += ' ORDER BY created_at DESC';
 
     const [rows] = await connection.execute<RowDataPacket[]>(query, params);
     return rows.map((row: any) => this.mapRowToLineCapacity(row));
+    } finally {
+      connection.release();
+    }
   }
-
   /**
    * Get a line capacity by ID
    */
   async getLineCapacityById(id: number): Promise<LineCapacity | null> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    const [rows] = await connection.execute<RowDataPacket[]>(
-      `SELECT id, line_id, order_no, buyer, style_no, garment_description, 
-              sam, operators, working_hours, efficiency, daily_capacity,
-              effective_from, effective_to, is_active, created_at, updated_at
-       FROM line_capacities WHERE id = ?`,
-      [id]
-    );
+    try {
+      const [rows] = await connection.execute<RowDataPacket[]>(
+        `SELECT id, line_id, order_no, buyer, style_no, garment_description, 
+                sam, operators, working_hours, efficiency, daily_capacity,
+                effective_from, effective_to, is_active, created_at, updated_at
+         FROM line_capacities WHERE id = ?`,
+        [id]
+      );
 
-    if (rows.length === 0) {
-      return null;
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return this.mapRowToLineCapacity(rows[0]);
+    } finally {
+      connection.release();
     }
-
-    return this.mapRowToLineCapacity(rows[0]);
   }
-
   /**
    * Get current effective line capacity for a line
    */
   async getCurrentLineCapacity(lineId: string, effectiveDate?: Date): Promise<LineCapacity | null> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    const checkDate = effectiveDate || new Date();
-    
-    const [rows] = await connection.execute<RowDataPacket[]>(
-      `SELECT id, line_id, order_no, buyer, style_no, garment_description, 
-              sam, operators, working_hours, efficiency, daily_capacity,
-              effective_from, effective_to, is_active, created_at, updated_at
-       FROM line_capacities 
-       WHERE line_id = ? 
-         AND is_active = TRUE
-         AND effective_from <= ?
-         AND (effective_to IS NULL OR effective_to >= ?)
-       ORDER BY effective_from DESC
-       LIMIT 1`,
-      [lineId, checkDate, checkDate]
-    );
+    try {
+      const checkDate = effectiveDate || new Date();
+      
+      const [rows] = await connection.execute<RowDataPacket[]>(
+        `SELECT id, line_id, order_no, buyer, style_no, garment_description, 
+                sam, operators, working_hours, efficiency, daily_capacity,
+                effective_from, effective_to, is_active, created_at, updated_at
+         FROM line_capacities 
+         WHERE line_id = ? 
+           AND is_active = TRUE
+           AND effective_from <= ?
+           AND (effective_to IS NULL OR effective_to >= ?)
+         ORDER BY effective_from DESC
+         LIMIT 1`,
+        [lineId, checkDate, checkDate]
+      );
 
-    if (rows.length === 0) {
-      return null;
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return this.mapRowToLineCapacity(rows[0]);
+    } finally {
+      connection.release();
     }
-
-    return this.mapRowToLineCapacity(rows[0]);
   }
-
   /**
    * Update a line capacity
    */
   async updateLineCapacity(id: number, data: UpdateLineCapacityData): Promise<LineCapacity> {
-    const connection = await getConnection();
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
     
-    // Check if line capacity exists
-    const existing = await this.getLineCapacityById(id);
-    if (!existing) {
-      throw new Error('Line capacity not found');
-    }
+    try {
+      // Check if line capacity exists
+      const existing = await this.getLineCapacityById(id);
+      if (!existing) {
+        throw new Error('Line capacity not found');
+      }
 
     // Validate data
     if (data.sam !== undefined && data.sam <= 0) {
@@ -358,36 +376,39 @@ export class LineCapacityRepository {
     await connection.execute(
       `UPDATE line_capacities SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       params
-    );
-
-    // Return updated line capacity
+    );    // Return updated line capacity
     const updated = await this.getLineCapacityById(id);
     if (!updated) {
       throw new Error('Failed to retrieve updated line capacity');
     }
 
     return updated;
+    } finally {
+      connection.release();
+    }
   }
-
   /**
    * Delete a line capacity (soft delete)
    */
   async deleteLineCapacity(id: number): Promise<boolean> {
-    const connection = await getConnection();
-    
-    const existing = await this.getLineCapacityById(id);
-    if (!existing) {
-      return false;
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
+    try {
+      const existing = await this.getLineCapacityById(id);
+      if (!existing) {
+        return false;
+      }
+
+      await connection.execute(
+        'UPDATE line_capacities SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [id]
+      );
+
+      return true;
+    } finally {
+      connection.release();
     }
-
-    await connection.execute(
-      'UPDATE line_capacities SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [id]
-    );
-
-    return true;
   }
-
   /**
    * Get line capacity statistics
    */
@@ -398,28 +419,31 @@ export class LineCapacityRepository {
     avgEfficiency: number;
     totalLines: number;
   }> {
-    const connection = await getConnection();
-    
-    const [rows] = await connection.execute<RowDataPacket[]>(`
-      SELECT 
-        COUNT(*) as total_records,
-        SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_records,
-        AVG(daily_capacity) as avg_daily_capacity,
-        AVG(efficiency) as avg_efficiency,
-        COUNT(DISTINCT line_id) as total_lines
-      FROM line_capacities
-    `);
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.execute<RowDataPacket[]>(`
+        SELECT 
+          COUNT(*) as total_records,
+          SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_records,
+          AVG(daily_capacity) as avg_daily_capacity,
+          AVG(efficiency) as avg_efficiency,
+          COUNT(DISTINCT line_id) as total_lines
+        FROM line_capacities
+      `);
 
-    const stats = rows[0] as any;
-    return {
-      totalRecords: stats.total_records || 0,
-      activeRecords: stats.active_records || 0,
-      avgDailyCapacity: parseFloat((stats.avg_daily_capacity || 0).toFixed(2)),
-      avgEfficiency: parseFloat((stats.avg_efficiency || 0).toFixed(2)),
-      totalLines: stats.total_lines || 0
-    };
+      const stats = rows[0] as any;
+      return {
+        totalRecords: stats.total_records || 0,
+        activeRecords: stats.active_records || 0,
+        avgDailyCapacity: parseFloat((stats.avg_daily_capacity || 0).toFixed(2)),
+        avgEfficiency: parseFloat((stats.avg_efficiency || 0).toFixed(2)),
+        totalLines: stats.total_lines || 0
+      };
+    } finally {
+      connection.release();
+    }
   }
-
   /**
    * Get capacity summary by line
    */
@@ -431,30 +455,34 @@ export class LineCapacityRepository {
     avgEfficiency: number;
     latestUpdate: Date;
   }>> {
-    const connection = await getConnection();
-    
-    const [rows] = await connection.execute<RowDataPacket[]>(`
-      SELECT 
-        line_id,
-        COUNT(*) as record_count,
-        AVG(daily_capacity) as avg_daily_capacity,
-        MAX(daily_capacity) as max_daily_capacity,
-        AVG(efficiency) as avg_efficiency,
-        MAX(updated_at) as latest_update
-      FROM line_capacities
-      WHERE is_active = TRUE
-      GROUP BY line_id
-      ORDER BY line_id
-    `);
+    const pool = await getConnection();
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.execute<RowDataPacket[]>(`
+        SELECT 
+          line_id,
+          COUNT(*) as record_count,
+          AVG(daily_capacity) as avg_daily_capacity,
+          MAX(daily_capacity) as max_daily_capacity,
+          AVG(efficiency) as avg_efficiency,
+          MAX(updated_at) as latest_update
+        FROM line_capacities
+        WHERE is_active = TRUE
+        GROUP BY line_id
+        ORDER BY line_id
+      `);
 
-    return rows.map((row: any) => ({
-      lineId: row.line_id,
-      recordCount: row.record_count || 0,
-      avgDailyCapacity: parseFloat((row.avg_daily_capacity || 0).toFixed(2)),
-      maxDailyCapacity: parseFloat((row.max_daily_capacity || 0).toFixed(2)),
-      avgEfficiency: parseFloat((row.avg_efficiency || 0).toFixed(2)),
-      latestUpdate: row.latest_update
-    }));
+      return rows.map((row: any) => ({
+        lineId: row.line_id,
+        recordCount: row.record_count || 0,
+        avgDailyCapacity: parseFloat((row.avg_daily_capacity || 0).toFixed(2)),
+        maxDailyCapacity: parseFloat((row.max_daily_capacity || 0).toFixed(2)),
+        avgEfficiency: parseFloat((row.avg_efficiency || 0).toFixed(2)),
+        latestUpdate: row.latest_update
+      }));
+    } finally {
+      connection.release();
+    }
   }
 
   /**

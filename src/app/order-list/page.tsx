@@ -185,10 +185,8 @@ export default function OrderListPage() {
   };
 
   const handleEditOrder = (order: DisplayOrder) => {
-    toast({
-      title: `Editing Order: ${order.orderNo}`,
-      description: `Placeholder for editing order functionality.`,
-    });
+    // Navigate to edit order page
+    window.location.href = `/edit-order/${order.id}`;
   };
 
   const promptCancelOrder = (order: DisplayOrder) => {
@@ -364,7 +362,7 @@ export default function OrderListPage() {
                   {selectedOrderForDetails.timelineEvents.map((event) => {
                     const IconComponent = event.icon;
                     return (
-                      <div key={event.id} className="relative pl-8 transition-all duration-300 ease-in-out hover:scale-[1.02]">
+                      <div key={event.id} className="relative pl-8 ui-transition-normal ui-hover-primary">
                         <div className={`w-10 h-10 flex items-center justify-center rounded-full absolute -left-5 ring-4 ring-background ${event.iconClass || 'bg-primary text-primary-foreground'}`}>
                           <IconComponent className="w-5 h-5" />
                         </div>

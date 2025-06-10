@@ -314,45 +314,113 @@ export function TimelineSchedulePane({
                   className="absolute top-0 left-0 w-full overflow-hidden"
                   style={{height: currentHeights.mainUnit}} 
                 >
-                  {tasks
-                    .filter((task) => task.resourceId === resource.id)
-                    .map((task) => {
-                      const taskStartDateObj = parseISO(task.startDate);
-                      const taskEndDateObj = parseISO(task.endDate);
+                  {(() => {
+                    // Get all tasks for this resource and calculate their positions
+                    const resourceTasks = tasks
+                      .filter((task) => task.resourceId === resource.id)
+                      .map((task) => {
+                        const taskStartDateObj = parseISO(task.startDate);
+                        const taskEndDateObj = parseISO(task.endDate);
 
-                      let taskStartUnitIndex = -1;
-                      let taskEndUnitIndex = -1;
+                        let taskStartUnitIndex = -1;
+                        let taskEndUnitIndex = -1;
 
-                      displayedUnits.forEach((unitDate, index) => {
-                        const unitStart = (timelineViewMode === 'hourly') ? unitDate : startOfDay(unitDate);
-                        const unitEnd = (timelineViewMode === 'hourly') ? addHours(unitStart, 1) : endOfDay(unitStart);
+                        displayedUnits.forEach((unitDate, index) => {
+                          const unitStart = (timelineViewMode === 'hourly') ? unitDate : startOfDay(unitDate);
+                          const unitEnd = (timelineViewMode === 'hourly') ? addHours(unitStart, 1) : endOfDay(unitStart);
+                          
+                          const isTaskStartOnOrBeforeUnitEnd = taskStartDateObj < unitEnd;
+                          const isTaskEndOnOrAfterUnitStart = taskEndDateObj >= unitStart;
+
+                          if (isTaskStartOnOrBeforeUnitEnd && isTaskEndOnOrAfterUnitStart) {
+                             if (taskStartUnitIndex === -1) {
+                                  taskStartUnitIndex = index;
+                              }
+                              taskEndUnitIndex = index;
+                          }
+                        });
                         
-                        const isTaskStartOnOrBeforeUnitEnd = taskStartDateObj < unitEnd;
-                        const isTaskEndOnOrAfterUnitStart = taskEndDateObj >= unitStart;
-
-                        if (isTaskStartOnOrBeforeUnitEnd && isTaskEndOnOrAfterUnitStart) {
-                           if (taskStartUnitIndex === -1) {
-                                taskStartUnitIndex = index;
-                            }
-                            taskEndUnitIndex = index;
+                        if (taskStartUnitIndex === -1 || taskEndUnitIndex === -1) {
+                          return null; 
                         }
-                      });
+
+                        // Clamp the task end index to stay within the visible timeline bounds
+                        const clampedTaskEndIndex = Math.min(taskEndUnitIndex, displayedUnits.length - 1);
+                        
+                        const left = taskStartUnitIndex * unitCellWidth;
+                        const width = (clampedTaskEndIndex - taskStartUnitIndex + 1) * unitCellWidth;
+
+                        if (width <= 0) return null;
+
+                        return {
+                          task,
+                          left,
+                          width,
+                          startIndex: taskStartUnitIndex,
+                          endIndex: clampedTaskEndIndex
+                        };
+                      })
+                      .filter(Boolean)
+                      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+                    // Simple vertical stacking for overlapping tasks
+                    const stackedTasks: Array<{
+                      task: any;
+                      left: number;
+                      width: number;
+                      startIndex: number;
+                      endIndex: number;
+                      stackLevel: number;
+                    }> = [];
+                    const occupiedLevels: Array<Set<number>> = []; // Array to track which stack levels are occupied at each time unit
+
+                    for (const taskData of resourceTasks) {
+                      let stackLevel = 0;
                       
-                      if (taskStartUnitIndex === -1 || taskEndUnitIndex === -1 ) {
-                        return null; 
+                      // Find the lowest available stack level for this task's time range
+                      while (true) {
+                        let levelAvailable = true;
+                        
+                        // Check if this stack level is free for the entire task duration
+                        for (let unitIndex = taskData.startIndex; unitIndex <= taskData.endIndex; unitIndex++) {
+                          if (!occupiedLevels[unitIndex]) occupiedLevels[unitIndex] = new Set();
+                          if (occupiedLevels[unitIndex].has(stackLevel)) {
+                            levelAvailable = false;
+                            break;
+                          }
+                        }
+                        
+                        if (levelAvailable) {
+                          // Mark this level as occupied for the task's duration
+                          for (let unitIndex = taskData.startIndex; unitIndex <= taskData.endIndex; unitIndex++) {
+                            if (!occupiedLevels[unitIndex]) occupiedLevels[unitIndex] = new Set();
+                            occupiedLevels[unitIndex].add(stackLevel);
+                          }
+                          break;
+                        }
+                        
+                        stackLevel++;
+                        // Safety check to prevent infinite loops
+                        if (stackLevel > 10) break;
                       }
-
-                      const left = taskStartUnitIndex * unitCellWidth;
-                      const width = (taskEndUnitIndex - taskStartUnitIndex + 1) * unitCellWidth;
-
-                      if (width <=0) return null;
                       
-                      const schedulableResource = allResources.find(r => r.id === task.resourceId);
+                      stackedTasks.push({ ...taskData, stackLevel });
+                    }
 
+                    const schedulableResource = allResources.find(r => r.id === resource.id);
 
+                    return stackedTasks.map(({ task, left, width, stackLevel }) => {
+                      const adjustedHeight = Math.max(12, taskHeight - Math.min(stackLevel * 2, 8)); // Reduce height slightly for stacked tasks, max reduction 8px
+                      const adjustedTopMargin = taskTop + (stackLevel * (adjustedHeight + 2)); // Stack with 2px gap
+                      
                       return (
                         <TimelineTask
-                          key={task.id} task={task} left={left} width={width} height={taskHeight} topMargin={taskTop}
+                          key={task.id} 
+                          task={task} 
+                          left={left} 
+                          width={width} 
+                          height={adjustedHeight} 
+                          topMargin={adjustedTopMargin}
                           onUndoAllocation={onUndoAllocation}
                           resourceCapacityPerDay={schedulableResource?.capacity}
                           onOpenSplitDialog={onOpenSplitDialog as (task: Task) => void}
@@ -362,7 +430,8 @@ export function TimelineSchedulePane({
                           onOpenEqualiseOrderDialog={onOpenEqualiseOrderDialog}
                         />
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               )}
 

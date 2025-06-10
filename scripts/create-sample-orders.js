@@ -1,354 +1,242 @@
-// Script to create 5 sample orders and save to MySQL database
+// Create 5 sample orders for testing
 const fetch = require('node-fetch');
 
 const BASE_URL = 'http://localhost:9002';
 
-// Sample order data with different characteristics
+// Sample order data
 const sampleOrders = [
   {
     orderReference: 'ORD-2025-001',
-    description: 'Summer Collection T-Shirts for European Market',
+    description: 'Summer Collection T-Shirts',
     product: 'Basic Cotton T-Shirt',
-    customer: 'Fashion Forward EU',
-    timetable: 'Q2 2025',
-    orderSet: 'Summer-2025',
-    salesYear: 2025,
-    season: 'Summer',
-    efficiency: 85,
-    userStatus: 'Active',
-    learningCurveId: 'standard-apparel',
-    tnaTemplate: 'basic-garment-template',
+    customer: 'Fashion Forward Ltd',
+    buyer: 'Fashion Forward Ltd',
+    styleName: 'Classic Crew Neck',
     status: 'confirmed',
-    color: '#FF6B6B',
     contractQuantity: 5000,
-    distributeFrom: 'Main Warehouse',
-    deliverTo: 'European Distribution Center',
-    method: 'Sea Freight',
-    planInGroup: 'Group-A',
-    useRoute: 'EU-Route-1',
     orderDate: new Date('2025-06-01').toISOString(),
     receivedDate: new Date('2025-06-01').toISOString(),
-    generalNotes: 'High priority order for summer season launch',
+    learningCurveId: 'lc-basic-tshirt',
+    tnaTemplate: 'standard-garment',
+    activeSizeNames: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
     poLines: [
       {
-        id: 'po-summer-001',
+        id: 'po-001-1',
         soNo: 'SO-2025-001',
-        poName: 'EU Summer Basic Tees',
+        poName: 'PO-FF-001',
         deliveryDate: new Date('2025-08-15').toISOString(),
-        country: 'Germany',
-        extraPercentage: 5,
+        country: 'USA',
         sizeQuantities: [
-          { sizeName: 'XS', quantity: 300 },
-          { sizeName: 'S', quantity: 800 },
-          { sizeName: 'M', quantity: 1200 },
-          { sizeName: 'L', quantity: 1000 },
-          { sizeName: 'XL', quantity: 500 },
-          { sizeName: 'XXL', quantity: 200 }
-        ]
-      },
-      {
-        id: 'po-summer-002',
-        soNo: 'SO-2025-002',
-        poName: 'EU Summer Premium Tees',
-        deliveryDate: new Date('2025-08-30').toISOString(),
-        country: 'France',
-        extraPercentage: 3,
-        sizeQuantities: [
-          { sizeName: 'XS', quantity: 200 },
-          { sizeName: 'S', quantity: 600 },
-          { sizeName: 'M', quantity: 800 },
-          { sizeName: 'L', quantity: 700 },
-          { sizeName: 'XL', quantity: 400 },
-          { sizeName: 'XXL', quantity: 300 }
+          { sizeName: 'XS', quantity: 250 },
+          { sizeName: 'S', quantity: 750 },
+          { sizeName: 'M', quantity: 1500 },
+          { sizeName: 'L', quantity: 1500 },
+          { sizeName: 'XL', quantity: 750 },
+          { sizeName: 'XXL', quantity: 250 }
         ]
       }
     ],
     deliveryDetails: [
       {
-        id: 'delivery-summer-001',
+        id: 'delivery-001-1',
         deliveryDate: new Date('2025-08-15').toISOString(),
-        quantity: 4000,
-        reference: 'First Batch - Core Sizes'
-      },
-      {
-        id: 'delivery-summer-002',
-        deliveryDate: new Date('2025-08-30').toISOString(),
-        quantity: 3000,
-        reference: 'Second Batch - Extended Sizes'
+        quantity: 5000,
+        reference: 'Main Shipment'
       }
-    ],
-    activeSizeNames: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+    ]
   },
-
   {
     orderReference: 'ORD-2025-002',
-    description: 'Athletic Wear Collection for North American Market',
-    product: 'Performance Athletic Shorts',
-    customer: 'SportZone USA',
-    timetable: 'Q3 2025',
-    orderSet: 'Athletic-2025',
-    salesYear: 2025,
-    season: 'Fall',
-    efficiency: 92,
-    userStatus: 'In Progress',
-    learningCurveId: 'athletic-wear',
-    tnaTemplate: 'sports-garment-template',
-    status: 'in_progress',
-    color: '#4ECDC4',
-    contractQuantity: 8000,
-    distributeFrom: 'US Production Hub',
-    deliverTo: 'North American Retail Centers',
-    method: 'Ground Transportation',
-    planInGroup: 'Group-B',
-    useRoute: 'US-Route-2',
-    orderDate: new Date('2025-05-15').toISOString(),
-    receivedDate: new Date('2025-05-20').toISOString(),
-    generalNotes: 'Focus on moisture-wicking fabric and athletic fit',
-    planningNotes: 'Coordinate with athletic wear production line',
+    description: 'Autumn Collection Hoodies',
+    product: 'Premium Hoodie',
+    customer: 'Urban Style Co',
+    buyer: 'Urban Style Co',
+    styleName: 'Pullover Hoodie with Pocket',
+    status: 'provisional',
+    contractQuantity: 3000,
+    orderDate: new Date('2025-06-02').toISOString(),
+    receivedDate: new Date('2025-06-02').toISOString(),
+    learningCurveId: 'lc-hoodie',
+    tnaTemplate: 'heavy-garment',
+    activeSizeNames: ['S', 'M', 'L', 'XL', 'XXL'],
     poLines: [
       {
-        id: 'po-athletic-001',
-        soNo: 'SO-2025-003',
-        poName: 'Performance Shorts - Men',
-        deliveryDate: new Date('2025-09-10').toISOString(),
-        country: 'United States',
-        extraPercentage: 2,
+        id: 'po-002-1',
+        soNo: 'SO-2025-002',
+        poName: 'PO-US-002',
+        deliveryDate: new Date('2025-09-30').toISOString(),
+        country: 'Canada',
         sizeQuantities: [
-          { sizeName: 'S', quantity: 800 },
-          { sizeName: 'M', quantity: 1500 },
-          { sizeName: 'L', quantity: 1800 },
-          { sizeName: 'XL', quantity: 1200 },
-          { sizeName: 'XXL', quantity: 700 }
-        ]
-      },
-      {
-        id: 'po-athletic-002',
-        soNo: 'SO-2025-004',
-        poName: 'Performance Shorts - Women',
-        deliveryDate: new Date('2025-09-15').toISOString(),
-        country: 'United States',
-        extraPercentage: 2,
-        sizeQuantities: [
-          { sizeName: 'XS', quantity: 400 },
-          { sizeName: 'S', quantity: 900 },
-          { sizeName: 'M', quantity: 1100 },
-          { sizeName: 'L', quantity: 800 },
-          { sizeName: 'XL', quantity: 300 }
+          { sizeName: 'S', quantity: 300 },
+          { sizeName: 'M', quantity: 900 },
+          { sizeName: 'L', quantity: 1200 },
+          { sizeName: 'XL', quantity: 450 },
+          { sizeName: 'XXL', quantity: 150 }
         ]
       }
     ],
     deliveryDetails: [
       {
-        id: 'delivery-athletic-001',
-        deliveryDate: new Date('2025-09-10').toISOString(),
-        quantity: 6000,
-        reference: 'Men\'s Athletic Shorts'
-      },
-      {
-        id: 'delivery-athletic-002',
-        deliveryDate: new Date('2025-09-15').toISOString(),
-        quantity: 3500,
-        reference: 'Women\'s Athletic Shorts'
+        id: 'delivery-002-1',
+        deliveryDate: new Date('2025-09-30').toISOString(),
+        quantity: 3000,
+        reference: 'Autumn Collection'
       }
-    ],
-    activeSizeNames: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+    ]
   },
-
   {
     orderReference: 'ORD-2025-003',
-    description: 'Corporate Uniforms for Hospitality Chain',
-    product: 'Professional Polo Shirts',
-    customer: 'Grand Hotels International',
-    timetable: 'Q4 2025',
-    orderSet: 'Corporate-2025',
-    salesYear: 2025,
-    season: 'All Season',
-    efficiency: 88,
-    userStatus: 'Pending Approval',
-    learningCurveId: 'corporate-uniform',
-    tnaTemplate: 'uniform-template',
+    description: 'Corporate Polo Shirts',
+    product: 'Business Polo Shirt',
+    customer: 'Corporate Apparel Inc',
+    buyer: 'Corporate Apparel Inc',
+    styleName: 'Professional Polo',
     status: 'provisional',
-    color: '#45B7D1',
-    contractQuantity: 3000,
-    distributeFrom: 'Corporate Hub',
-    deliverTo: 'Hotel Chain Locations',
-    method: 'Express Delivery',
-    planInGroup: 'Group-C',
-    useRoute: 'Corporate-Route-1',
+    contractQuantity: 2500,
     orderDate: new Date('2025-06-03').toISOString(),
     receivedDate: new Date('2025-06-03').toISOString(),
-    generalNotes: 'Corporate branding with logo embroidery required',
-    materialsNotes: 'Use premium cotton blend for professional appearance',
+    learningCurveId: 'lc-polo',
+    tnaTemplate: 'standard-garment',
+    activeSizeNames: ['XS', 'S', 'M', 'L', 'XL'],
     poLines: [
       {
-        id: 'po-corporate-001',
-        soNo: 'SO-2025-005',
-        poName: 'Hotel Staff Polos - Navy',
-        deliveryDate: new Date('2025-10-01').toISOString(),
-        country: 'Multiple Locations',
-        extraPercentage: 8,
+        id: 'po-003-1',
+        soNo: 'SO-2025-003',
+        poName: 'PO-CA-003',
+        deliveryDate: new Date('2025-07-20').toISOString(),
+        country: 'USA',
         sizeQuantities: [
-          { sizeName: 'S', quantity: 400 },
-          { sizeName: 'M', quantity: 800 },
-          { sizeName: 'L', quantity: 900 },
-          { sizeName: 'XL', quantity: 600 },
+          { sizeName: 'XS', quantity: 125 },
+          { sizeName: 'S', quantity: 500 },
+          { sizeName: 'M', quantity: 750 },
+          { sizeName: 'L', quantity: 750 },
+          { sizeName: 'XL', quantity: 375 }
+        ]
+      }
+    ],
+    deliveryDetails: [
+      {
+        id: 'delivery-003-1',
+        deliveryDate: new Date('2025-07-20').toISOString(),
+        quantity: 2500,
+        reference: 'Corporate Order'
+      }
+    ]
+  },
+  {
+    orderReference: 'ORD-2025-004',
+    description: 'Kids Collection Tank Tops',
+    product: 'Kids Tank Top',
+    customer: 'Little Stars Clothing',
+    buyer: 'Little Stars Clothing',
+    styleName: 'Fun Print Tank',
+    status: 'confirmed',
+    contractQuantity: 4000,
+    orderDate: new Date('2025-06-04').toISOString(),
+    receivedDate: new Date('2025-06-04').toISOString(),
+    learningCurveId: 'lc-kids-tank',
+    tnaTemplate: 'kids-garment',
+    activeSizeNames: ['2T', '3T', '4T', '5T', '6T'],
+    poLines: [
+      {
+        id: 'po-004-1',
+        soNo: 'SO-2025-004',
+        poName: 'PO-LS-004-A',
+        deliveryDate: new Date('2025-07-10').toISOString(),
+        country: 'USA',
+        sizeQuantities: [
+          { sizeName: '2T', quantity: 400 },
+          { sizeName: '3T', quantity: 800 },
+          { sizeName: '4T', quantity: 1200 },
+          { sizeName: '5T', quantity: 800 },
+          { sizeName: '6T', quantity: 400 }
+        ]
+      },
+      {
+        id: 'po-004-2',
+        soNo: 'SO-2025-004',
+        poName: 'PO-LS-004-B',
+        deliveryDate: new Date('2025-07-25').toISOString(),
+        country: 'USA',
+        sizeQuantities: [
+          { sizeName: '2T', quantity: 100 },
+          { sizeName: '3T', quantity: 200 },
+          { sizeName: '4T', quantity: 300 },
+          { sizeName: '5T', quantity: 200 },
+          { sizeName: '6T', quantity: 100 }
+        ]
+      }
+    ],
+    deliveryDetails: [
+      {
+        id: 'delivery-004-1',
+        deliveryDate: new Date('2025-07-10').toISOString(),
+        quantity: 3600,
+        reference: 'First Batch'
+      },
+      {
+        id: 'delivery-004-2',
+        deliveryDate: new Date('2025-07-25').toISOString(),
+        quantity: 400,
+        reference: 'Second Batch'
+      }
+    ]
+  },
+  {
+    orderReference: 'ORD-2025-005',
+    description: 'Athletic Wear Collection',
+    product: 'Performance Sports Tee',
+    customer: 'ActiveWear Pro',
+    buyer: 'ActiveWear Pro',
+    styleName: 'Moisture Wicking Tee',
+    status: 'confirmed',
+    contractQuantity: 6000,
+    orderDate: new Date('2025-06-05').toISOString(),
+    receivedDate: new Date('2025-06-05').toISOString(),
+    learningCurveId: 'lc-performance',
+    tnaTemplate: 'athletic-garment',
+    activeSizeNames: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    poLines: [
+      {
+        id: 'po-005-1',
+        soNo: 'SO-2025-005',
+        poName: 'PO-AW-005',
+        deliveryDate: new Date('2025-08-01').toISOString(),
+        country: 'USA',
+        sizeQuantities: [
+          { sizeName: 'XS', quantity: 300 },
+          { sizeName: 'S', quantity: 900 },
+          { sizeName: 'M', quantity: 1800 },
+          { sizeName: 'L', quantity: 1800 },
+          { sizeName: 'XL', quantity: 900 },
           { sizeName: 'XXL', quantity: 300 }
         ]
       }
     ],
     deliveryDetails: [
       {
-        id: 'delivery-corporate-001',
-        deliveryDate: new Date('2025-10-01').toISOString(),
-        quantity: 3000,
-        reference: 'Complete Corporate Uniform Set'
-      }
-    ],
-    activeSizeNames: ['S', 'M', 'L', 'XL', 'XXL']
-  },
-
-  {
-    orderReference: 'ORD-2025-004',
-    description: 'Designer Collection for Fashion Week Launch',
-    product: 'Premium Designer Dress',
-    customer: 'Elite Fashion House',
-    timetable: 'Fashion Week 2025',
-    orderSet: 'Designer-2025',
-    salesYear: 2025,
-    season: 'Spring',
-    efficiency: 95,
-    userStatus: 'High Priority',
-    learningCurveId: 'premium-fashion',
-    tnaTemplate: 'designer-template',
-    status: 'confirmed',
-    color: '#F39C12',
-    contractQuantity: 1200,
-    distributeFrom: 'Designer Atelier',
-    deliverTo: 'Luxury Boutiques',
-    method: 'Premium Courier',
-    planInGroup: 'Group-Premium',
-    useRoute: 'Luxury-Route-1',
-    orderDate: new Date('2025-05-28').toISOString(),
-    receivedDate: new Date('2025-05-30').toISOString(),
-    generalNotes: 'Highest quality standards required for fashion week debut',
-    sizesNotes: 'Premium sizing with exact fit requirements',
-    eventsNotes: 'Must be ready for Fashion Week runway shows',
-    poLines: [
-      {
-        id: 'po-designer-001',
-        soNo: 'SO-2025-006',
-        poName: 'Designer Collection - Main Line',
-        deliveryDate: new Date('2025-07-15').toISOString(),
-        country: 'Milan, Italy',
-        extraPercentage: 15,
-        sizeQuantities: [
-          { sizeName: 'XS', quantity: 150 },
-          { sizeName: 'S', quantity: 300 },
-          { sizeName: 'M', quantity: 400 },
-          { sizeName: 'L', quantity: 250 },
-          { sizeName: 'XL', quantity: 100 }
-        ]
-      }
-    ],
-    deliveryDetails: [
-      {
-        id: 'delivery-designer-001',
-        deliveryDate: new Date('2025-07-15').toISOString(),
-        quantity: 1200,
-        reference: 'Fashion Week Collection - Complete Set'
-      }
-    ],
-    activeSizeNames: ['XS', 'S', 'M', 'L', 'XL']
-  },
-
-  {
-    orderReference: 'ORD-2025-005',
-    description: 'Children\'s School Uniform Collection',
-    product: 'School Polo Shirts and Pants',
-    customer: 'Educational Uniform Supply Co',
-    timetable: 'Back to School 2025',
-    orderSet: 'School-2025',
-    salesYear: 2025,
-    season: 'Fall',
-    efficiency: 90,
-    userStatus: 'Scheduled',
-    learningCurveId: 'childrens-wear',
-    tnaTemplate: 'school-uniform-template',
-    status: 'unscheduled',
-    color: '#8E44AD',
-    contractQuantity: 6500,
-    distributeFrom: 'Education Supply Center',
-    deliverTo: 'School Districts',
-    method: 'Standard Shipping',
-    planInGroup: 'Group-D',
-    useRoute: 'Education-Route-1',
-    orderDate: new Date('2025-06-02').toISOString(),
-    receivedDate: new Date('2025-06-04').toISOString(),
-    generalNotes: 'Durable fabrics suitable for active children',
-    sizesNotes: 'Wide range of children sizes from age 5-18',
-    planningNotes: 'Schedule for completion before school year starts',
-    poLines: [
-      {
-        id: 'po-school-001',
-        soNo: 'SO-2025-007',
-        poName: 'Elementary School Uniforms',
+        id: 'delivery-005-1',
         deliveryDate: new Date('2025-08-01').toISOString(),
-        country: 'United States',
-        extraPercentage: 10,
-        sizeQuantities: [
-          { sizeName: 'Age 5-6', quantity: 400 },
-          { sizeName: 'Age 7-8', quantity: 600 },
-          { sizeName: 'Age 9-10', quantity: 700 },
-          { sizeName: 'Age 11-12', quantity: 600 }
-        ]
-      },
-      {
-        id: 'po-school-002',
-        soNo: 'SO-2025-008',
-        poName: 'Middle & High School Uniforms',
-        deliveryDate: new Date('2025-08-10').toISOString(),
-        country: 'United States',
-        extraPercentage: 8,
-        sizeQuantities: [
-          { sizeName: 'Age 13-14', quantity: 800 },
-          { sizeName: 'Age 15-16', quantity: 900 },
-          { sizeName: 'Age 17-18', quantity: 700 }
-        ]
+        quantity: 6000,
+        reference: 'Athletic Collection Launch'
       }
-    ],
-    deliveryDetails: [
-      {
-        id: 'delivery-school-001',
-        deliveryDate: new Date('2025-08-01').toISOString(),
-        quantity: 2300,
-        reference: 'Elementary School Batch'
-      },
-      {
-        id: 'delivery-school-002',
-        deliveryDate: new Date('2025-08-10').toISOString(),
-        quantity: 2400,
-        reference: 'Middle & High School Batch'
-      }
-    ],
-    activeSizeNames: ['Age 5-6', 'Age 7-8', 'Age 9-10', 'Age 11-12', 'Age 13-14', 'Age 15-16', 'Age 17-18']
+    ]
   }
 ];
 
 async function createSampleOrders() {
-  console.log('🏭 Creating 5 Sample Orders for MySQL Database...\n');
+  console.log('🚀 Creating 5 Sample Orders...\n');
 
   try {
     // Use native fetch for Node.js 18+
     const fetch = globalThis.fetch || require('node-fetch');
 
+    let successCount = 0;
+    
     for (let i = 0; i < sampleOrders.length; i++) {
       const order = sampleOrders[i];
-      console.log(`📦 Creating Order ${i + 1}: ${order.orderReference}`);
-      console.log(`   Product: ${order.product}`);
-      console.log(`   Customer: ${order.customer}`);
-      console.log(`   Quantity: ${order.contractQuantity} units`);
-      console.log(`   Status: ${order.status}`);
-
+      console.log(`📝 Creating Order ${i + 1}: ${order.orderReference}`);
+      
       const response = await fetch(`${BASE_URL}/api/orders`, {
         method: 'POST',
         headers: {
@@ -356,44 +244,40 @@ async function createSampleOrders() {
         },
         body: JSON.stringify(order)
       });
-
+      
       const result = await response.json();
-
+      
       if (result.success) {
-        console.log(`   ✅ Order created successfully (ID: ${result.data.id})`);
+        console.log(`✅ Order ${order.orderReference} created successfully (ID: ${result.data.id})`);
+        successCount++;
       } else {
-        console.log(`   ❌ Failed to create order: ${result.error}`);
+        console.log(`❌ Failed to create order ${order.orderReference}:`, result.error);
         if (result.details) {
-          console.log(`   Details:`, result.details);
+          console.log('   Validation errors:', result.details);
         }
       }
-      console.log('');
     }
-
-    // Verify all orders were created
-    console.log('📊 Verifying orders in database...');
-    const verifyResponse = await fetch(`${BASE_URL}/api/orders`);
-    const verifyResult = await verifyResponse.json();
-
-    if (verifyResult.success) {
-      console.log(`✅ Database now contains ${verifyResult.data.length} orders total`);
+    
+    console.log(`\n🎉 Successfully created ${successCount} out of ${sampleOrders.length} orders!`);
+    
+    // Verify by fetching all orders
+    console.log('\n📊 Fetching all orders to verify...');
+    const allOrdersResponse = await fetch(`${BASE_URL}/api/orders`);
+    const allOrdersResult = await allOrdersResponse.json();
+    
+    if (allOrdersResult.success) {
+      console.log(`✅ Total orders in database: ${allOrdersResult.data.length}`);
+      
+      // Show summary of created orders
       console.log('\n📋 Order Summary:');
-      verifyResult.data.forEach((order, index) => {
-        const totalQuantity = order.poLines.reduce((sum, poLine) => {
-          return sum + poLine.sizeQuantities.reduce((lineSum, size) => lineSum + size.quantity, 0);
+      allOrdersResult.data.forEach((order, index) => {
+        const totalQty = order.poLines.reduce((sum, poLine) => {
+          return sum + poLine.sizeQuantities.reduce((lineSum, sizeQty) => lineSum + sizeQty.quantity, 0);
         }, 0);
         
-        console.log(`   ${index + 1}. ${order.order_reference} - ${order.product} (${totalQuantity} units) - Status: ${order.status}`);
+        console.log(`${index + 1}. ${order.order_reference} - ${order.product} (${order.status}) - ${totalQty} units`);
       });
-    } else {
-      console.log('❌ Failed to verify orders in database');
     }
-
-    console.log('\n🎉 Sample order creation complete!');
-    console.log('💡 You can now view these orders in the application:');
-    console.log('   - Order List: http://localhost:9002/order-list');
-    console.log('   - Unscheduled Orders: http://localhost:9002/unscheduled-orders');
-    console.log('   - Production Updates: http://localhost:9002/production-updates');
 
   } catch (error) {
     console.error('❌ Error creating sample orders:', error.message);

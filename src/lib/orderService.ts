@@ -75,71 +75,104 @@ export interface StoredOrder {
   }>;
 }
 
+// Helper function to safely convert dates to ISO strings
+function safeDateToISO(date: any): string | undefined {
+  if (!date) return undefined;
+  
+  try {
+    if (date instanceof Date) {
+      return date.toISOString();
+    }
+    if (typeof date === 'string') {
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString();
+      }
+    }
+    if (typeof date === 'number') {
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString();
+      }
+    }
+  } catch (error) {
+    console.warn('Error converting date to ISO string:', error, 'Date value:', date);
+  }
+  
+  return undefined;
+}
+
 // Convert MySQL CompleteOrderData to StoredOrder format
 function convertToStoredOrder(order: CompleteOrderData): StoredOrder {
-  return {
-    id: order.id,
-    orderReference: order.order_reference,
-    description: order.description,
-    product: order.product,
-    customer: order.customer,
-    buyer: order.buyer,
-    styleName: order.style_name,
-    timetable: order.timetable,
-    orderSet: order.order_set,
-    salesYear: order.sales_year,
-    season: order.season,
-    efficiency: order.efficiency,
-    userStatus: order.user_status,
-    learningCurveId: order.learning_curve_id,
-    tnaTemplate: order.tna_template,
-    status: order.status,
-    color: order.color,
-    isCompleted: order.is_completed,
-    orderDate: order.order_date?.toISOString(),
-    receivedDate: order.received_date?.toISOString(),
-    launchDate: order.launch_date?.toISOString(),
-    shipDate: order.ship_date?.toISOString(),
-    contractQuantity: order.contract_quantity,
-    distributeFrom: order.distribute_from,
-    deliverTo: order.deliver_to,
-    method: order.method,
-    planInGroup: order.plan_in_group,
-    useRoute: order.use_route,
-    deliveredQuantity: order.delivered_quantity,
-    reservation: order.reservation,
-    scheduleOffset: order.schedule_offset,
-    generalNotes: order.general_notes,
-    financialNotes: order.financial_notes,
-    sizesNotes: order.sizes_notes,
-    planningNotes: order.planning_notes,
-    materialsNotes: order.materials_notes,
-    eventsNotes: order.events_notes,
-    userValuesNotes: order.user_values_notes,
-    consolidatedViewNotes: order.consolidated_view_notes,
-    progressViewNotes: order.progress_view_notes,
-    createdAt: order.created_at?.toISOString(),
-    updatedAt: order.updated_at?.toISOString(),
-    deliveryDetails: order.deliveryDetails.map(dd => ({
-      id: dd.id,
-      deliveryDate: dd.delivery_date.toISOString(),
-      quantity: dd.quantity,
-      reference: dd.reference,
-    })),
-    poLines: order.poLines.map(pl => ({
-      id: pl.id,
-      soNo: pl.so_no,
-      poName: pl.po_name,
-      deliveryDate: pl.delivery_date?.toISOString(),
-      country: pl.country,
-      extraPercentage: pl.extra_percentage,
-      sizeQuantities: pl.sizeQuantities.map(sq => ({
-        id: sq.id,
-        sizeName: sq.size_name,
-        quantity: sq.quantity,
+  try {
+    return {
+      id: order.id,
+      orderReference: order.order_reference,
+      description: order.description,
+      product: order.product,
+      customer: order.customer,
+      buyer: order.buyer,
+      styleName: order.style_name,
+      timetable: order.timetable,
+      orderSet: order.order_set,
+      salesYear: order.sales_year,
+      season: order.season,
+      efficiency: order.efficiency,
+      userStatus: order.user_status,
+      learningCurveId: order.learning_curve_id,
+      tnaTemplate: order.tna_template,
+      status: order.status,
+      color: order.color,
+      isCompleted: order.is_completed,
+      orderDate: safeDateToISO(order.order_date),
+      receivedDate: safeDateToISO(order.received_date),
+      launchDate: safeDateToISO(order.launch_date),
+      shipDate: safeDateToISO(order.ship_date),
+      contractQuantity: order.contract_quantity,
+      distributeFrom: order.distribute_from,
+      deliverTo: order.deliver_to,
+      method: order.method,
+      planInGroup: order.plan_in_group,
+      useRoute: order.use_route,
+      deliveredQuantity: order.delivered_quantity,
+      reservation: order.reservation,
+      scheduleOffset: order.schedule_offset,
+      generalNotes: order.general_notes,
+      financialNotes: order.financial_notes,
+      sizesNotes: order.sizes_notes,
+      planningNotes: order.planning_notes,
+      materialsNotes: order.materials_notes,
+      eventsNotes: order.events_notes,
+      userValuesNotes: order.user_values_notes,
+      consolidatedViewNotes: order.consolidated_view_notes,
+      progressViewNotes: order.progress_view_notes,
+      createdAt: safeDateToISO(order.created_at),
+      updatedAt: safeDateToISO(order.updated_at),
+      deliveryDetails: (order.deliveryDetails || []).map(dd => ({
+        id: dd.id,
+        deliveryDate: safeDateToISO(dd.delivery_date) || new Date().toISOString(),
+        quantity: dd.quantity || 0,
+        reference: dd.reference || '',
       })),
-    })),
-  };
+      poLines: (order.poLines || []).map(pl => ({
+        id: pl.id,
+        soNo: pl.so_no || '',
+        poName: pl.po_name || '',
+        deliveryDate: safeDateToISO(pl.delivery_date),
+        country: pl.country || '',
+        extraPercentage: pl.extra_percentage || 0,
+        sizeQuantities: (pl.sizeQuantities || []).map(sq => ({
+          id: sq.id,
+          sizeName: sq.size_name || '',
+          quantity: sq.quantity || 0,
+        })),
+      })),
+    };
+  } catch (error) {
+    console.error('Error in convertToStoredOrder:', error);
+    console.error('Order data:', order);
+    throw new Error(`Failed to convert order data: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export class OrderService {
@@ -168,7 +201,6 @@ export class OrderService {
       throw error;
     }
   }
-
   // Get all orders
   static async getAllOrders(): Promise<StoredOrder[]> {
     try {
@@ -179,7 +211,23 @@ export class OrderService {
         throw new Error(result.error || 'Failed to fetch orders');
       }
 
-      return result.data!.map(convertToStoredOrder);
+      // Safely convert orders with error handling for individual orders
+      const convertedOrders: StoredOrder[] = [];
+      const orders = result.data || [];
+      
+      for (let i = 0; i < orders.length; i++) {
+        try {
+          const convertedOrder = convertToStoredOrder(orders[i]);
+          convertedOrders.push(convertedOrder);
+        } catch (conversionError) {
+          console.error(`Error converting order at index ${i}:`, conversionError);
+          console.error('Order data:', orders[i]);
+          // Skip this order and continue with the next one
+          continue;
+        }
+      }
+
+      return convertedOrders;
     } catch (error) {
       console.error('Error fetching orders:', error);
       throw error;
