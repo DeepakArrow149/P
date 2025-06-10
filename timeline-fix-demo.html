@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Overlap Fix Demonstration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .timeline {
+            position: relative;
+            height: 200px;
+            border: 2px solid #e0e0e0;
+            background: #fafafa;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .timeline-units {
+            display: flex;
+            height: 30px;
+            border-bottom: 1px solid #ddd;
+        }
+        .unit {
+            flex: 1;
+            border-right: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: #f8f8f8;
+        }
+        .task {
+            position: absolute;
+            height: 20px;
+            border-radius: 4px;
+            color: white;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .task-a { background: #3b82f6; }
+        .task-b { background: #10b981; }
+        .task-c { background: #f59e0b; }
+        .task-d { background: #ef4444; }
+        .task-e { background: #8b5cf6; }
+        
+        .problem {
+            background: #fee2e2;
+            border: 2px solid #fecaca;
+        }
+        .fixed {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 15px;
+            border-radius: 3px;
+        }
+        
+        .overlap-indicator {
+            position: absolute;
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px dashed red;
+            z-index: 10;
+        }
+        
+        .extension-indicator {
+            position: absolute;
+            background: rgba(255, 165, 0, 0.5);
+            border: 2px dashed orange;
+            z-index: 10;
+        }
+        
+        h1, h2, h3 {
+            color: #1f2937;
+        }
+        
+        .stats {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status.problem {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .status.fixed {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Timeline Overlap Fix Demonstration</h1>
+        <p>This demonstration shows the timeline rendering before and after implementing our overlap and boundary fixes.</p>
+        
+        <!-- Problem Demonstration -->
+        <div class="demo-section problem">
+            <h2>❌ Before Fix: Problems</h2>
+            
+            <h3>Issue 1: Overlapping Task Strips</h3>
+            <p>Multiple tasks assigned to the same resource at overlapping times were rendered on top of each other:</p>
+            
+            <div class="timeline">
+                <div class="timeline-units">
+                    <div class="unit">0</div>
+                    <div class="unit">1</div>
+                    <div class="unit">2</div>
+                    <div class="unit">3</div>
+                    <div class="unit">4</div>
+                    <div class="unit">5</div>
+                    <div class="unit">6</div>
+                    <div class="unit">7</div>
+                    <div class="unit">8</div>
+                    <div class="unit">9</div>
+                    <div class="unit">10</div>
+                    <div class="unit">11</div>
+                    <div class="unit">12</div>
+                    <div class="unit">13</div>
+                    <div class="unit">14</div>
+                </div>
+                
+                <!-- Overlapping tasks at same level -->
+                <div class="task task-a" style="left: 0%; width: 26.67%; top: 50px;">Task A</div>
+                <div class="task task-b" style="left: 13.33%; width: 26.67%; top: 50px;">Task B</div>
+                <div class="task task-c" style="left: 26.67%; width: 26.67%; top: 50px;">Task C</div>
+                
+                <!-- Overlap indicators -->
+                <div class="overlap-indicator" style="left: 13.33%; width: 13.34%; top: 45px; height: 30px;"></div>
+                <div class="overlap-indicator" style="left: 26.67%; width: 13.34%; top: 45px; height: 30px;"></div>
+            </div>
+            
+            <div class="stats">
+                <strong>Problems:</strong>
+                <ul>
+                    <li>Tasks B and A overlap (units 2-3)</li>
+                    <li>Tasks C and B overlap (units 4-5)</li>
+                    <li>User cannot see all tasks clearly</li>
+                    <li>Tasks are visually obscured</li>
+                </ul>
+            </div>
+            
+            <h3>Issue 2: Task Strip Extension Beyond Bounds</h3>
+            <p>Tasks extending beyond the visible timeline area were rendered outside bounds:</p>
+            
+            <div class="timeline">
+                <div class="timeline-units">
+                    <div class="unit">0</div>
+                    <div class="unit">1</div>
+                    <div class="unit">2</div>
+                    <div class="unit">3</div>
+                    <div class="unit">4</div>
+                    <div class="unit">5</div>
+                    <div class="unit">6</div>
+                    <div class="unit">7</div>
+                    <div class="unit">8</div>
+                    <div class="unit">9</div>
+                    <div class="unit">10</div>
+                    <div class="unit">11</div>
+                    <div class="unit">12</div>
+                    <div class="unit">13</div>
+                    <div class="unit">14</div>
+                </div>
+                
+                <!-- Task extending beyond bounds -->
+                <div class="task task-d" style="left: 40%; width: 80%; top: 50px;">Task D (extends beyond)</div>
+                
+                <!-- Extension indicator -->
+                <div class="extension-indicator" style="left: 100%; width: 20%; top: 45px; height: 30px;"></div>
+            </div>
+            
+            <div class="stats">
+                <strong>Problems:</strong>
+                <ul>
+                    <li>Task extends beyond visible timeline (units 15-20)</li>
+                    <li>Layout breaks outside container</li>
+                    <li>Horizontal scrolling issues</li>
+                    <li>Visual inconsistency</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Solution Demonstration -->
+        <div class="demo-section fixed">
+            <h2>✅ After Fix: Solutions</h2>
+            
+            <h3>Solution 1: Intelligent Vertical Stacking</h3>
+            <p>Overlapping tasks are now automatically stacked vertically at different levels:</p>
+            
+            <div class="timeline">
+                <div class="timeline-units">
+                    <div class="unit">0</div>
+                    <div class="unit">1</div>
+                    <div class="unit">2</div>
+                    <div class="unit">3</div>
+                    <div class="unit">4</div>
+                    <div class="unit">5</div>
+                    <div class="unit">6</div>
+                    <div class="unit">7</div>
+                    <div class="unit">8</div>
+                    <div class="unit">9</div>
+                    <div class="unit">10</div>
+                    <div class="unit">11</div>
+                    <div class="unit">12</div>
+                    <div class="unit">13</div>
+                    <div class="unit">14</div>
+                </div>
+                
+                <!-- Stacked tasks at different levels -->
+                <div class="task task-a" style="left: 0%; width: 26.67%; top: 40px; height: 18px;">Task A (L0)</div>
+                <div class="task task-b" style="left: 13.33%; width: 26.67%; top: 62px; height: 18px;">Task B (L1)</div>
+                <div class="task task-c" style="left: 26.67%; width: 26.67%; top: 84px; height: 18px;">Task C (L2)</div>
+                <div class="task task-e" style="left: 66.67%; width: 20%; top: 40px; height: 18px;">Task E (L0)</div>
+            </div>
+            
+            <div class="stats">
+                <strong>Improvements:</strong>
+                <ul>
+                    <li>✅ No visual overlaps - all tasks visible</li>
+                    <li>✅ Automatic level assignment (L0, L1, L2)</li>
+                    <li>✅ 2px gaps between stacked tasks</li>
+                    <li>✅ Slightly reduced height for stacked items</li>
+                </ul>
+            </div>
+            
+            <h3>Solution 2: Boundary Clipping</h3>
+            <p>Tasks extending beyond visible area are now clipped to timeline bounds:</p>
+            
+            <div class="timeline">
+                <div class="timeline-units">
+                    <div class="unit">0</div>
+                    <div class="unit">1</div>
+                    <div class="unit">2</div>
+                    <div class="unit">3</div>
+                    <div class="unit">4</div>
+                    <div class="unit">5</div>
+                    <div class="unit">6</div>
+                    <div class="unit">7</div>
+                    <div class="unit">8</div>
+                    <div class="unit">9</div>
+                    <div class="unit">10</div>
+                    <div class="unit">11</div>
+                    <div class="unit">12</div>
+                    <div class="unit">13</div>
+                    <div class="unit">14</div>
+                </div>
+                
+                <!-- Task clipped to bounds -->
+                <div class="task task-d" style="left: 40%; width: 60%; top: 50px;">Task D (clipped)</div>
+            </div>
+            
+            <div class="stats">
+                <strong>Improvements:</strong>
+                <ul>
+                    <li>✅ Task width clipped to visible timeline</li>
+                    <li>✅ No overflow beyond container</li>
+                    <li>✅ Consistent layout behavior</li>
+                    <li>✅ Proper boundary validation</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>📊 Technical Implementation</h2>
+            
+            <h3>Stacking Algorithm</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto;"><code>// Occupancy tracking per time unit
+const occupiedLevels: Array&lt;Set&lt;number&gt;&gt; = [];
+
+for (const taskData of resourceTasks) {
+  let stackLevel = 0;
+  
+  // Find lowest available stack level
+  while (true) {
+    let levelAvailable = true;
+    
+    // Check if level is free for entire task duration
+    for (let unitIndex = taskData.startIndex; unitIndex <= taskData.endIndex; unitIndex++) {
+      if (!occupiedLevels[unitIndex]) occupiedLevels[unitIndex] = new Set();
+      if (occupiedLevels[unitIndex].has(stackLevel)) {
+        levelAvailable = false;
+        break;
+      }
+    }
+    
+    if (levelAvailable) {
+      // Mark level as occupied
+      for (let unitIndex = taskData.startIndex; unitIndex <= taskData.endIndex; unitIndex++) {
+        occupiedLevels[unitIndex].add(stackLevel);
+      }
+      break;
+    }
+    
+    stackLevel++;
+    if (stackLevel > 10) break; // Safety limit
+  }
+  
+  stackedTasks.push({ ...taskData, stackLevel });
+}</code></pre>
+            
+            <h3>Boundary Checking</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto;"><code>// Clamp task end index to visible timeline bounds
+const clampedTaskEndIndex = Math.min(taskEndUnitIndex, displayedUnits.length - 1);
+
+const left = taskStartUnitIndex * unitCellWidth;
+const width = (clampedTaskEndIndex - taskStartUnitIndex + 1) * unitCellWidth;</code></pre>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎯 Key Benefits</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3>User Experience</h3>
+                    <ul>
+                        <li>✅ All tasks clearly visible</li>
+                        <li>✅ No visual overlaps</li>
+                        <li>✅ Consistent layout</li>
+                        <li>✅ Better resource utilization view</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Technical Robustness</h3>
+                    <ul>
+                        <li>✅ Boundary-safe rendering</li>
+                        <li>✅ Efficient stacking algorithm</li>
+                        <li>✅ Compatible with existing features</li>
+                        <li>✅ Prevents layout breaks</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color task-a"></div>
+                <span>Task A</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color task-b"></div>
+                <span>Task B</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color task-c"></div>
+                <span>Task C</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color task-d"></div>
+                <span>Task D</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color task-e"></div>
+                <span>Task E</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
