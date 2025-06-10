@@ -717,8 +717,8 @@ export default function BucketPlanningPage() {
   return (
     <>
       <PageHeader
-        title="Bucket Planning"
-        description="Visualize daily resource capacity allocation and booking status. Drag unscheduled orders to buckets."
+        title="🪣 Bucket Planning - Manufacturing Control Center"
+        description="Centralized control for all manufacturing factories and production lines. Each 'bucket' represents a container for unscheduled orders with visual capacity tracking - just like filling a physical bucket!"
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-lg">
@@ -727,10 +727,10 @@ export default function BucketPlanningPage() {
               <div>
                 <CardTitle className="flex items-center text-xl font-semibold">
                   <Archive className="mr-2 h-6 w-6 text-primary" />
-                  Daily Resource Capacity Buckets
+                  Production Capacity Buckets
                 </CardTitle>
                 <CardDescription className="text-sm text-muted-foreground">
-                   Plan: <span className="font-semibold">{activePlanName}</span>. Overview of capacities, booked orders, and balance.
+                   Plan: <span className="font-semibold">{activePlanName}</span>. Visual containers showing how 'full' each production line is - like water filling a bucket. Green = plenty of room, Red = overflowing!
                 </CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
@@ -806,13 +806,13 @@ export default function BucketPlanningPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[120px] sticky left-0 bg-card z-10 px-4 py-3">Date</TableHead>
-                    <TableHead className="w-[200px] px-4 py-3">Resource & Utilization</TableHead> 
-                    <TableHead className="text-right px-4 py-3">Daily Cap. (pcs)</TableHead>
-                    <TableHead className="px-4 py-3">Booked Task Part(s)</TableHead>
-                    <TableHead className="px-4 py-3">Original Style(s)</TableHead>
-                    <TableHead className="text-right px-4 py-3">Total Planned (pcs)</TableHead>
-                    <TableHead className="text-right px-4 py-3">Balance Cap. (pcs)</TableHead>
-                    <TableHead className="text-center px-4 py-3">Status</TableHead>
+                    <TableHead className="w-[200px] px-4 py-3">Production Line & Bucket Fill Level</TableHead> 
+                    <TableHead className="text-right px-4 py-3">Bucket Capacity (pcs)</TableHead>
+                    <TableHead className="px-4 py-3">Orders in Bucket</TableHead>
+                    <TableHead className="px-4 py-3">Product Styles</TableHead>
+                    <TableHead className="text-right px-4 py-3">Total Filled (pcs)</TableHead>
+                    <TableHead className="text-right px-4 py-3">Space Remaining (pcs)</TableHead>
+                    <TableHead className="text-center px-4 py-3">Bucket Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -860,7 +860,7 @@ export default function BucketPlanningPage() {
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, row.date, row.resourceId)} 
                       >
-                        {row.bookedOrders.map(bo => bo.orderId).join(', ') || <span className="text-muted-foreground">- Drop Here -</span>}
+                        {row.bookedOrders.map(bo => bo.orderId).join(', ') || <span className="text-muted-foreground">🪣 Drop orders into this bucket</span>}
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate px-4 py-3">
                         {row.bookedOrders.map(bo => bo.style).join(', ') || '-'}
@@ -870,7 +870,12 @@ export default function BucketPlanningPage() {
                         {row.balanceCapacity.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-center px-4 py-3">
-                        <Badge variant={getStatusBadgeVariant(row.status)}>{row.status}</Badge>
+                        <Badge variant={getStatusBadgeVariant(row.status)}>
+                          {row.status === 'Open' ? '🪣 Empty' : 
+                           row.status === 'Partially Booked' ? '🪣 Filling' :
+                           row.status === 'Full' ? '🪣 Full' :
+                           row.status === 'Overbooked' ? '🪣 Overflow' : row.status}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   )) : (
@@ -895,7 +900,7 @@ export default function BucketPlanningPage() {
                   Unscheduled Orders
                 </CardTitle>
                 <CardDescription className="text-sm text-muted-foreground">
-                  Organized by production group. Drag orders to schedule.
+                  🪣 Orders organized by production type. Drag them into the appropriate bucket containers above to schedule production.
                 </CardDescription>
               </div>
               <DropdownMenu>
@@ -1056,20 +1061,20 @@ export default function BucketPlanningPage() {
             </h4>
             <div className="flex flex-wrap gap-x-6 gap-y-2 items-center">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">Open</Badge>
-                <span className="text-sm">Full capacity available</span>
+                <Badge variant="secondary">🪣 Empty</Badge>
+                <span className="text-sm">Bucket ready for orders</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="default">Partially Booked</Badge>
-                <span className="text-sm">Some capacity used</span>
+                <Badge variant="default">🪣 Filling</Badge>
+                <span className="text-sm">Some orders in bucket</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={getStatusBadgeVariant('Full')}>Full</Badge>
-                <span className="text-sm">Capacity fully utilized</span>
+                <Badge variant={getStatusBadgeVariant('Full')}>🪣 Full</Badge>
+                <span className="text-sm">Bucket at capacity</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="destructive">Overbooked</Badge>
-                <span className="text-sm text-destructive">Demand exceeds capacity!</span>
+                <Badge variant="destructive">🪣 Overflow</Badge>
+                <span className="text-sm text-destructive">Bucket overflowing!</span>
               </div>
             </div>
           </div>
@@ -1148,16 +1153,16 @@ export default function BucketPlanningPage() {
           <div>
             <h4 className="font-medium mb-3 flex items-center gap-2">
               <Users className="h-4 w-4 text-teal-500" />
-              How to Use
+              🪣 How to Use Bucket Planning
             </h4>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-              <li>Orders are organized by production group (Volume, Specialty, Finishing, Assembly)</li>
-              <li>Drag orders from grouped sections onto resource cells for specific dates</li>
-              <li>Watch smooth animations and visual feedback during drag operations</li>
-              <li>Capacity bars show real-time utilization with color-coded status</li>
-              <li>Use filters to show/hide specific production groups</li>
-              <li>Orders consider quantity, learning curves, and daily resource capacity</li>
-              <li>Partially scheduled orders remain in unscheduled list with updated quantities</li>
+              <li>🪣 Orders are organized by production group (Volume, Specialty, Finishing, Assembly)</li>
+              <li>👆 Drag orders from grouped sections onto bucket cells for specific dates</li>
+              <li>✨ Watch smooth animations and visual feedback during drag operations</li>
+              <li>📊 Capacity bars show real-time bucket fill levels with color-coded status</li>
+              <li>🔍 Use filters to show/hide specific production groups</li>
+              <li>⚡ Orders consider quantity, learning curves, and daily bucket capacity</li>
+              <li>📝 Partially scheduled orders remain in unscheduled list with updated quantities</li>
             </ul>
           </div>
         </CardContent>
