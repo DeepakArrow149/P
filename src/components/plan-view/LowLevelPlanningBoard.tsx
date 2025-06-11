@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { 
   Users,
   Clock,
@@ -29,12 +31,69 @@ import {
   RotateCcw,
   Zap,
   Target,
-  Factory
+  Factory,
+  Calendar,
+  Timer,
+  Activity,
+  Wrench,
+  Package,
+  ArrowRight,
+  ChevronRight,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, addHours, startOfDay, addDays } from 'date-fns';
+import { format, addHours, startOfDay, addDays, setHours, setMinutes, isWithinInterval, parseISO } from 'date-fns';
 
-// Types for Low-Level Planning Board
+// Enhanced types for Low-Level Planning Board (LLPB)
+interface DailyOrder {
+  id: string;
+  orderNo: string;
+  styleNo: string;
+  buyer: string;
+  orderQty: number;
+  styleSAM: number;
+  allocatedLine: string;
+  startDate: string;
+  endDate: string;
+  requiredHours: number;
+  priority: 'high' | 'medium' | 'low';
+  status: 'assigned' | 'in_progress' | 'paused' | 'completed' | 'delayed';
+  efficiency: number;
+  completedQty: number;
+  changeoverTime: number; // minutes for line changeover
+  color?: string;
+}
+
+interface LineSchedule {
+  lineId: string;
+  lineName: string;
+  factory: string;
+  unit: string;
+  date: string;
+  shifts: DailyShift[];
+  orders: DailyOrder[];
+  totalCapacity: number;
+  allocatedCapacity: number;
+  utilizationPercent: number;
+  changeoverBuffer: number; // minutes
+}
+
+interface DailyShift {
+  id: string;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  breakTime: number; // minutes
+  plannedOutput: number;
+  actualOutput: number;
+  efficiency: number;
+  operators: OperatorAssignment[];
+  bottlenecks: Bottleneck[];
+  status: 'planned' | 'active' | 'completed' | 'delayed';
+}
+
 interface ShiftData {
   id: string;
   shiftName: string;
@@ -55,6 +114,8 @@ interface ShiftData {
   status: 'on_track' | 'at_risk' | 'delayed' | 'completed';
   efficiency: number;
   wipCount: number;
+  changeoverTime: number;
+  autoSplitEnabled: boolean;
 }
 
 interface HourlyTarget {
@@ -63,25 +124,35 @@ interface HourlyTarget {
   actual: number;
   efficiency: number;
   cumulative: number;
+  cumulativeTarget: number;
+  variance: number;
+  status: 'on_track' | 'behind' | 'ahead';
 }
 
 interface Bottleneck {
   id: string;
   location: string;
-  type: 'operator' | 'machine' | 'material' | 'quality';
-  severity: 'critical' | 'warning';
+  type: 'operator' | 'machine' | 'material' | 'quality' | 'changeover';
+  severity: 'critical' | 'warning' | 'minor';
   description: string;
   impactedOutput: number;
   estimatedResolution: string;
+  startTime: string;
+  resolutionTime?: string;
+  assignedTo: string;
+  cost: number;
 }
 
 interface DelayReason {
   id: string;
-  type: 'maintenance' | 'late_input' | 'quality_issue' | 'absenteeism' | 'material_shortage';
+  type: 'maintenance' | 'late_input' | 'quality_issue' | 'absenteeism' | 'material_shortage' | 'changeover_delay';
   description: string;
   startTime: string;
   duration: number; // in minutes
   impact: number; // pieces lost
+  rootCause: string;
+  preventiveAction: string;
+  responsible: string;
 }
 
 interface OperatorAssignment {
@@ -92,6 +163,47 @@ interface OperatorAssignment {
   present: boolean;
   shiftId: string;
   lineId: string;
+  skills: string[];
+  trainingLevel: 'basic' | 'intermediate' | 'advanced' | 'expert';
+  hourlyRate: number;
+}
+
+interface GanttTimeSlot {
+  hour: string;
+  orders: {
+    orderId: string;
+    orderNo: string;
+    progress: number;
+    status: string;
+    efficiency: number;
+  }[];
+}
+
+interface PerformanceMetrics {
+  lineId: string;
+  date: string;
+  plannedVsActual: {
+    planned: number;
+    actual: number;
+    variance: number;
+    variancePercent: number;
+  };
+  efficiency: {
+    hourly: number[];
+    average: number;
+    trend: 'improving' | 'declining' | 'stable';
+  };
+  quality: {
+    defectRate: number;
+    reworkRate: number;
+    firstPassYield: number;
+  };
+  changeover: {
+    plannedTime: number;
+    actualTime: number;
+    variance: number;
+    efficiency: number;
+  };
 }
 
 // Mock data for demonstration
@@ -108,22 +220,21 @@ const mockShiftData: ShiftData[] = [
     actualOperators: 23,
     absentOperators: 2,
     plannedOutput: 800,
-    actualOutput: 720,
-    currentStage: 'Sewing - Operations 5-8',
+    actualOutput: 720,    currentStage: 'Sewing - Operations 5-8',
     status: 'at_risk',
     efficiency: 90,
     wipCount: 150,
-    hourlyTargets: [
-      { hour: '08:00', target: 100, actual: 95, efficiency: 95, cumulative: 95 },
-      { hour: '09:00', target: 100, actual: 98, efficiency: 98, cumulative: 193 },
-      { hour: '10:00', target: 100, actual: 105, efficiency: 105, cumulative: 298 },
-      { hour: '11:00', target: 100, actual: 92, efficiency: 92, cumulative: 390 },
-      { hour: '12:00', target: 100, actual: 88, efficiency: 88, cumulative: 478 },
-      { hour: '13:00', target: 100, actual: 95, efficiency: 95, cumulative: 573 },
-      { hour: '14:00', target: 100, actual: 90, efficiency: 90, cumulative: 663 },
-      { hour: '15:00', target: 100, actual: 87, efficiency: 87, cumulative: 750 }
-    ],
-    bottlenecks: [
+    changeoverTime: 15,
+    autoSplitEnabled: true,hourlyTargets: [
+      { hour: '08:00', target: 100, actual: 95, efficiency: 95, cumulative: 95, cumulativeTarget: 100, variance: -5, status: 'behind' },
+      { hour: '09:00', target: 100, actual: 98, efficiency: 98, cumulative: 193, cumulativeTarget: 200, variance: -7, status: 'behind' },
+      { hour: '10:00', target: 100, actual: 105, efficiency: 105, cumulative: 298, cumulativeTarget: 300, variance: -2, status: 'on_track' },
+      { hour: '11:00', target: 100, actual: 92, efficiency: 92, cumulative: 390, cumulativeTarget: 400, variance: -10, status: 'behind' },
+      { hour: '12:00', target: 100, actual: 88, efficiency: 88, cumulative: 478, cumulativeTarget: 500, variance: -22, status: 'behind' },
+      { hour: '13:00', target: 100, actual: 95, efficiency: 95, cumulative: 573, cumulativeTarget: 600, variance: -27, status: 'behind' },
+      { hour: '14:00', target: 100, actual: 90, efficiency: 90, cumulative: 663, cumulativeTarget: 700, variance: -37, status: 'behind' },
+      { hour: '15:00', target: 100, actual: 87, efficiency: 87, cumulative: 750, cumulativeTarget: 800, variance: -50, status: 'behind' }
+    ],    bottlenecks: [
       {
         id: 'B001',
         location: 'Operation 6 - Button Attach',
@@ -131,17 +242,22 @@ const mockShiftData: ShiftData[] = [
         severity: 'warning',
         description: 'Operator skill gap causing slowdown',
         impactedOutput: 20,
-        estimatedResolution: '2 hours'
+        estimatedResolution: '2 hours',
+        startTime: '11:30',
+        assignedTo: 'Production Supervisor',
+        cost: 150
       }
-    ],
-    delayReasons: [
+    ],    delayReasons: [
       {
         id: 'D001',
         type: 'maintenance',
         description: 'Sewing machine maintenance',
         startTime: '11:30',
         duration: 45,
-        impact: 15
+        impact: 15,
+        rootCause: 'Scheduled maintenance required',
+        preventiveAction: 'Regular maintenance schedule optimization',
+        responsible: 'Maintenance Team'
       }
     ]
   },
@@ -157,20 +273,20 @@ const mockShiftData: ShiftData[] = [
     actualOperators: 30,
     absentOperators: 0,
     plannedOutput: 1000,
-    actualOutput: 980,
-    currentStage: 'Sewing - Operations 10-12',
+    actualOutput: 980,    currentStage: 'Sewing - Operations 10-12',
     status: 'on_track',
     efficiency: 98,
     wipCount: 85,
-    hourlyTargets: [
-      { hour: '08:00', target: 125, actual: 120, efficiency: 96, cumulative: 120 },
-      { hour: '09:00', target: 125, actual: 128, efficiency: 102, cumulative: 248 },
-      { hour: '10:00', target: 125, actual: 125, efficiency: 100, cumulative: 373 },
-      { hour: '11:00', target: 125, actual: 122, efficiency: 98, cumulative: 495 },
-      { hour: '12:00', target: 125, actual: 130, efficiency: 104, cumulative: 625 },
-      { hour: '13:00', target: 125, actual: 125, efficiency: 100, cumulative: 750 },
-      { hour: '14:00', target: 125, actual: 118, efficiency: 94, cumulative: 868 },
-      { hour: '15:00', target: 125, actual: 125, efficiency: 100, cumulative: 993 }
+    changeoverTime: 10,
+    autoSplitEnabled: false,hourlyTargets: [
+      { hour: '08:00', target: 125, actual: 120, efficiency: 96, cumulative: 120, cumulativeTarget: 125, variance: -5, status: 'behind' },
+      { hour: '09:00', target: 125, actual: 128, efficiency: 102, cumulative: 248, cumulativeTarget: 250, variance: -2, status: 'on_track' },
+      { hour: '10:00', target: 125, actual: 125, efficiency: 100, cumulative: 373, cumulativeTarget: 375, variance: -2, status: 'on_track' },
+      { hour: '11:00', target: 125, actual: 122, efficiency: 98, cumulative: 495, cumulativeTarget: 500, variance: -5, status: 'behind' },
+      { hour: '12:00', target: 125, actual: 130, efficiency: 104, cumulative: 625, cumulativeTarget: 625, variance: 0, status: 'on_track' },
+      { hour: '13:00', target: 125, actual: 125, efficiency: 100, cumulative: 750, cumulativeTarget: 750, variance: 0, status: 'on_track' },
+      { hour: '14:00', target: 125, actual: 118, efficiency: 94, cumulative: 868, cumulativeTarget: 875, variance: -7, status: 'behind' },
+      { hour: '15:00', target: 125, actual: 125, efficiency: 100, cumulative: 993, cumulativeTarget: 1000, variance: -7, status: 'behind' }
     ],
     bottlenecks: [],
     delayReasons: []
@@ -178,11 +294,66 @@ const mockShiftData: ShiftData[] = [
 ];
 
 const mockOperatorAssignments: OperatorAssignment[] = [
-  { operatorId: 'OP001', operatorName: 'Sarah Johnson', position: 'Front Part', efficiency: 105, present: true, shiftId: 'S001', lineId: 'L1' },
-  { operatorId: 'OP002', operatorName: 'Mike Chen', position: 'Back Part', efficiency: 98, present: true, shiftId: 'S001', lineId: 'L1' },
-  { operatorId: 'OP003', operatorName: 'Lisa Wang', position: 'Sleeve Attach', efficiency: 88, present: false, shiftId: 'S001', lineId: 'L1' },
-  { operatorId: 'OP004', operatorName: 'John Davis', position: 'Button Attach', efficiency: 75, present: true, shiftId: 'S001', lineId: 'L1' },
-  { operatorId: 'OP005', operatorName: 'Maria Garcia', position: 'Final Check', efficiency: 110, present: true, shiftId: 'S001', lineId: 'L1' },
+  { 
+    operatorId: 'OP001', 
+    operatorName: 'Sarah Johnson', 
+    position: 'Front Part', 
+    efficiency: 105, 
+    present: true, 
+    shiftId: 'S001', 
+    lineId: 'L1',
+    skills: ['Front Panel Stitching', 'Basic Sewing', 'Quality Check'],
+    trainingLevel: 'advanced',
+    hourlyRate: 12.50
+  },
+  { 
+    operatorId: 'OP002', 
+    operatorName: 'Mike Chen', 
+    position: 'Back Part', 
+    efficiency: 98, 
+    present: true, 
+    shiftId: 'S001', 
+    lineId: 'L1',
+    skills: ['Back Panel Stitching', 'Seaming', 'Equipment Operation'],
+    trainingLevel: 'intermediate',
+    hourlyRate: 11.75
+  },
+  { 
+    operatorId: 'OP003', 
+    operatorName: 'Lisa Wang', 
+    position: 'Sleeve Attach', 
+    efficiency: 88, 
+    present: false, 
+    shiftId: 'S001', 
+    lineId: 'L1',
+    skills: ['Sleeve Attachment', 'Precision Stitching'],
+    trainingLevel: 'basic',
+    hourlyRate: 10.50
+  },
+  { 
+    operatorId: 'OP004', 
+    operatorName: 'John Davis', 
+    position: 'Button Attach', 
+    efficiency: 75, 
+    present: true, 
+    shiftId: 'S001', 
+    lineId: 'L1',
+    skills: ['Button Attachment', 'Hardware Installation'],
+    trainingLevel: 'basic',
+    hourlyRate: 10.25
+  },
+  { 
+    operatorId: 'OP005', 
+    operatorName: 'Maria Garcia', 
+    position: 'Final Check', 
+    efficiency: 110, 
+    present: true, 
+    shiftId: 'S001', 
+    lineId: 'L1',
+    skills: ['Quality Control', 'Final Inspection', 'Packaging'],
+    trainingLevel: 'expert',
+    hourlyRate: 14.00
+  },
 ];
 
 interface LowLevelPlanningBoardProps {
@@ -636,3 +807,5 @@ export const LowLevelPlanningBoard = React.memo(({ className }: LowLevelPlanning
 });
 
 LowLevelPlanningBoard.displayName = 'LowLevelPlanningBoard';
+
+export default LowLevelPlanningBoard;

@@ -8,7 +8,8 @@ import { TimelineToolbar } from '@/components/plan-view/timeline-toolbar';
 import TimelineGrid from '@/components/plan-view/timeline-grid';
 import { VerticalScheduler } from '@/components/plan-view/vertical-scheduler';
 import { HighLevelPlanningBoard } from '@/components/plan-view/HighLevelPlanningBoard';
-import { LowLevelPlanningBoard } from '@/components/plan-view/LowLevelPlanningBoard';
+import LowLevelPlanningBoard from '@/components/plan-view/LowLevelPlanningBoard';
+import LowLevelPlanningBoardEnhanced from '@/components/plan-view/LowLevelPlanningBoard_Enhanced';
 import type { Resource, Task, DailyData, UnscheduledOrder, SchedulableResource, VerticalTask, TimelineViewMode, VerticalTaskDailyData as TaskDailyData, MergeableOrderItem, RotationMode, PushPullState, HolidayDetail, RowHeightLevel, SubProcessOrder, SearchFormValues, TnaPlan, SubProcessViewMode, EqualiseOrderOptions } from '@/components/plan-view/types';
 import { RESOURCE_PANE_WIDTH, ROW_HEIGHT_CONFIG } from '@/components/plan-view/types';
 import { addDays, format, startOfWeek, eachDayOfInterval, parseISO, differenceInDays as fnsDifferenceInDays, addBusinessDays, startOfHour, addHours, startOfMonth, endOfMonth, endOfWeek as dateFnsEndOfWeek, eachWeekOfInterval, addMonths as dateFnsAddMonths, getDaysInMonth, isSameDay as isTodayChecker, isSameHour, isSameMonth, getMonth, subWeeks, subDays, subMonths, endOfDay, startOfDay } from 'date-fns';
@@ -2009,7 +2010,7 @@ export default function PlanViewPage() {
             </React.Suspense>
           ) : subProcessViewMode === 'low-level-planning' ? (
             <React.Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}>
-              <LowLevelPlanningBoard />
+              <LowLevelPlanningBoardEnhanced />
             </React.Suspense>
           ) : subProcessViewMode ? (
             <React.Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}>

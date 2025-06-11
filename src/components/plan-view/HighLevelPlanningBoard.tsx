@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { 
   Calendar,
   Filter,
@@ -27,29 +30,133 @@ import {
   Eye,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  Package,
+  ExternalLink,
+  Grip,
+  Move,
+  Save,
+  Calendar as CalendarIcon,
+  Info,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, addWeeks, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
+import { format, addWeeks, startOfWeek, endOfWeek, eachWeekOfInterval, getWeek, getYear, parseISO, isWithinInterval } from 'date-fns';
 
-// Types for High-Level Planning Board
+// Enhanced types for High-Level Planning Board (HLBP)
+interface WeeklyOrder {
+  id: string;
+  orderNo: string;
+  styleNo: string;
+  buyer: string;
+  deliveryDate: string;
+  orderQty: number;
+  styleSAM: number;
+  targetEfficiency: number;
+  lineGroup: string;
+  unit: string;
+  bookingWeekStart: string;
+  bookingWeekEnd: string;
+  status: 'pending_ta' | 'ready_to_plan' | 'planned' | 'in_progress' | 'completed';
+  taStatus: TAStatus;
+  priority: 'high' | 'medium' | 'low';
+  totalSAMs: number;
+  requiredWeeks: number;
+  preProductionReady: boolean;
+  overbookingAlert: boolean;
+  color?: string;
+}
+
+interface WeeklyCapacity {
+  weekNumber: number;
+  year: number;
+  weekStart: string;
+  weekEnd: string;
+  lineGroup: string;
+  factory: string;
+  unit: string;
+  totalCapacity: number;
+  allocatedCapacity: number;
+  availableCapacity: number;
+  utilizationPercent: number;
+  status: 'available' | 'tight' | 'overloaded';
+  bookedOrders: WeeklyOrder[];
+  samCapacity: number;
+  samUtilization: number;
+}
+
+interface LineGroupCapacity {
+  id: string;
+  name: string;
+  factory: string;
+  unit: string;
+  totalLines: number;
+  activeLines: number;
+  avgEfficiency: number;
+  weeklyCapacity: number; // SAMs per week
+  shiftHours: number;
+  operatorsPerLine: number;
+  specialization: string[];
+  dailyCapacity: number;
+  hourlyCapacity: number;
+}
+
+interface TAStatus {
+  orderId: string;
+  fabricApproval: 'pending' | 'approved' | 'rejected';
+  trimApproval: 'pending' | 'approved' | 'rejected';
+  ppMeeting: 'pending' | 'scheduled' | 'completed';
+  sampleApproval: 'pending' | 'approved' | 'rejected';
+  overallStatus: 'not_ready' | 'ready' | 'issues';
+  estimatedReadyDate: string;
+  comments: string;
+}
+
 interface UnscheduledOrder {
   id: string;
-  orderCode: string;
-  productCode: string;
-  productType: string;
-  customerCode: string;
-  orderDate: string;
-  deliveryDate: string;
-  quantity: number;
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'ready_to_schedule' | 'requires_material';
-  estimatedHours: number;
-  complexity: 'simple' | 'medium' | 'complex';
-  requirements: string[];
+  orderNo: string;
+  styleNo: string;
   buyer: string;
-  factory: string;
-  samRange: string;
+  deliveryDate: string;
+  orderQty: number;
+  styleSAM: number;
+  totalSAMs: number;
+  estimatedWeeks: number;
+  priority: 'high' | 'medium' | 'low';
+  taStatus: TAStatus;
+  complexity: 'simple' | 'medium' | 'complex';
+  requiredLineType: string;
+}
+
+interface WeeklyTimeBucket {
+  weekStart: string;
+  weekEnd: string;
+  weekNumber: number;
+  year: number;
+  isCurrentWeek: boolean;
+  capacity: {
+    [lineGroup: string]: {
+      totalSAM: number;
+      allocatedSAM: number;
+      utilizationPercent: number;
+      status: 'available' | 'tight' | 'overloaded';
+      orders: WeeklyOrder[];
+    };
+  };
+}
+
+interface WeeklyTimelineData {
+  weekStart: string;
+  weekEnd: string;
+  orders: StyleOrder[];
+  totalCapacity: number;
+  allocatedCapacity: number;
+  utilizationPercent: number;
 }
 
 interface StyleOrder {
@@ -62,25 +169,25 @@ interface StyleOrder {
   deliveryDate: string;
   priority: 'high' | 'medium' | 'low';
   status: 'planning' | 'scheduled' | 'in_progress' | 'completed';
-  milestones: Milestone[];
-  alerts: Alert[];
   estimatedWeeks: number;
   capacityRequired: number;
+  milestones: Milestone[];
+  alerts: Alert[];
 }
 
 interface Milestone {
   id: string;
   name: string;
-  type: 'cutting_start' | 'sewing_start' | 'ex_factory';
+  type: string;
   targetDate: string;
+  status: 'pending' | 'on_track' | 'at_risk' | 'delayed' | 'completed';
   actualDate?: string;
-  status: 'pending' | 'on_track' | 'at_risk' | 'completed' | 'delayed';
 }
 
 interface Alert {
   id: string;
-  type: 'fabric_shortage' | 'over_capacity' | 'line_idle' | 'delivery_risk';
-  severity: 'critical' | 'warning' | 'info';
+  type: string;
+  severity: 'info' | 'warning' | 'critical';
   message: string;
   orderId: string;
 }
@@ -98,162 +205,502 @@ interface LineCapacityData {
   efficiency: number;
 }
 
-interface WeeklyTimelineData {
-  weekStart: string;
-  weekEnd: string;
-  orders: StyleOrder[];
-  totalCapacity: number;
-  allocatedCapacity: number;
-  utilizationPercent: number;
+interface ExportData {
+  type: 'excel' | 'csv';
+  dateRange: { start: string; end: string };
+  includeFilters: boolean;
+  selectedColumns: string[];
 }
 
-// Mock data for unscheduled orders based on the provided image
+// Mock data for HLBP
+const mockWeeklyOrders: WeeklyOrder[] = [
+  {
+    id: 'WO-001',
+    orderNo: 'ORD-2024-001',
+    styleNo: 'ST-001-POLO',
+    buyer: 'Nike',
+    deliveryDate: '2024-08-15',
+    orderQty: 5000,
+    styleSAM: 25.5,
+    targetEfficiency: 75,
+    lineGroup: 'High Volume Lines',
+    unit: 'Unit 1',
+    bookingWeekStart: '2024-07-29',
+    bookingWeekEnd: '2024-08-12',
+    status: 'planned',
+    taStatus: {
+      orderId: 'WO-001',
+      fabricApproval: 'approved',
+      trimApproval: 'approved',
+      ppMeeting: 'completed',
+      sampleApproval: 'approved',
+      overallStatus: 'ready',
+      estimatedReadyDate: '2024-07-25',
+      comments: 'All approvals completed. Ready for production.'
+    },
+    priority: 'high',
+    totalSAMs: 127500,
+    requiredWeeks: 2,
+    preProductionReady: true,
+    overbookingAlert: false,
+    color: '#10B981'
+  },
+  {
+    id: 'WO-002',
+    orderNo: 'ORD-2024-002',
+    styleNo: 'ST-002-SHIRT',
+    buyer: 'Adidas',
+    deliveryDate: '2024-08-22',
+    orderQty: 3000,
+    styleSAM: 18.2,
+    targetEfficiency: 80,
+    lineGroup: 'Specialty Lines',
+    unit: 'Unit 2',
+    bookingWeekStart: '2024-08-05',
+    bookingWeekEnd: '2024-08-19',
+    status: 'ready_to_plan',
+    taStatus: {
+      orderId: 'WO-002',
+      fabricApproval: 'approved',
+      trimApproval: 'pending',
+      ppMeeting: 'scheduled',
+      sampleApproval: 'pending',
+      overallStatus: 'issues',
+      estimatedReadyDate: '2024-08-02',
+      comments: 'Trim approval pending. Sample approval in progress.'
+    },
+    priority: 'medium',
+    totalSAMs: 54600,
+    requiredWeeks: 1.5,
+    preProductionReady: false,
+    overbookingAlert: false,
+    color: '#F59E0B'
+  },
+  {
+    id: 'WO-003',
+    orderNo: 'ORD-2024-003',
+    styleNo: 'ST-003-JACKET',
+    buyer: 'Puma',
+    deliveryDate: '2024-09-10',
+    orderQty: 2000,
+    styleSAM: 45.8,
+    targetEfficiency: 70,
+    lineGroup: 'Finishing Lines',
+    unit: 'Unit 3',
+    bookingWeekStart: '2024-08-19',
+    bookingWeekEnd: '2024-09-02',
+    status: 'pending_ta',
+    taStatus: {
+      orderId: 'WO-003',
+      fabricApproval: 'pending',
+      trimApproval: 'pending',
+      ppMeeting: 'pending',
+      sampleApproval: 'pending',
+      overallStatus: 'not_ready',
+      estimatedReadyDate: '2024-08-15',
+      comments: 'Pre-production activities in progress.'
+    },
+    priority: 'low',
+    totalSAMs: 91600,
+    requiredWeeks: 2.5,
+    preProductionReady: false,
+    overbookingAlert: true,
+    color: '#EF4444'
+  },
+  {
+    id: 'WO-004',
+    orderNo: 'ORD-2024-004',
+    styleNo: 'ST-004-DRESS',
+    buyer: 'Zara',
+    deliveryDate: '2024-08-30',
+    orderQty: 4500,
+    styleSAM: 32.1,
+    targetEfficiency: 78,
+    lineGroup: 'Assembly Lines',
+    unit: 'Unit 1',
+    bookingWeekStart: '2024-08-12',
+    bookingWeekEnd: '2024-08-26',
+    status: 'in_progress',
+    taStatus: {
+      orderId: 'WO-004',
+      fabricApproval: 'approved',
+      trimApproval: 'approved',
+      ppMeeting: 'completed',
+      sampleApproval: 'approved',
+      overallStatus: 'ready',
+      estimatedReadyDate: '2024-08-08',
+      comments: 'Production started. All approvals complete.'
+    },
+    priority: 'high',
+    totalSAMs: 144450,
+    requiredWeeks: 2,
+    preProductionReady: true,
+    overbookingAlert: false,
+    color: '#8B5CF6'
+  }
+];
+
 const mockUnscheduledOrders: UnscheduledOrder[] = [
   {
     id: 'UO-001',
-    orderCode: 'ORD-240115-001',
-    productCode: 'BT-WM-LST-001',
-    productType: 'Basic T-Shirt',
-    customerCode: 'NIKE-APP',
-    orderDate: '2024-01-15',
-    deliveryDate: '2024-03-15',
-    quantity: 5000,
+    orderNo: 'ORD-2024-005',
+    styleNo: 'ST-005-CASUAL',
+    buyer: 'H&M',
+    deliveryDate: '2024-09-15',
+    orderQty: 6000,
+    styleSAM: 22.3,
+    totalSAMs: 133800,
+    estimatedWeeks: 2.2,
     priority: 'high',
-    status: 'ready_to_schedule',
-    estimatedHours: 220,
+    taStatus: {
+      orderId: 'UO-001',
+      fabricApproval: 'approved',
+      trimApproval: 'approved',
+      ppMeeting: 'completed',
+      sampleApproval: 'pending',
+      overallStatus: 'ready',
+      estimatedReadyDate: '2024-08-20',
+      comments: 'Ready for planning. Sample approval expected soon.'
+    },
     complexity: 'simple',
-    requirements: ['Cotton Fabric', 'Standard Stitching', 'Screen Printing'],
-    buyer: 'Nike Apparel',
-    factory: 'Factory A',
-    samRange: '45-50 min'
+    requiredLineType: 'Sewing'
   },
   {
     id: 'UO-002',
-    orderCode: 'ORD-240115-002',
-    productCode: 'CP-MN-PLO-002',
-    productType: 'Polo Shirt',
-    customerCode: 'HM-GLOB',
-    orderDate: '2024-01-15',
-    deliveryDate: '2024-03-20',
-    quantity: 3500,
+    orderNo: 'ORD-2024-006',
+    styleNo: 'ST-006-COMPLEX',
+    buyer: 'GAP',
+    deliveryDate: '2024-10-05',
+    orderQty: 2500,
+    styleSAM: 52.7,
+    totalSAMs: 131750,
+    estimatedWeeks: 3.1,
     priority: 'medium',
-    status: 'requires_material',
-    estimatedHours: 185,
-    complexity: 'medium',
-    requirements: ['Pique Fabric', 'Collar Attachment', 'Button Placement'],
-    buyer: 'H&M Global',
-    factory: 'Factory B',
-    samRange: '55-60 min'
+    taStatus: {
+      orderId: 'UO-002',
+      fabricApproval: 'pending',
+      trimApproval: 'pending',
+      ppMeeting: 'pending',
+      sampleApproval: 'pending',
+      overallStatus: 'not_ready',
+      estimatedReadyDate: '2024-09-01',
+      comments: 'Awaiting all T&A approvals.'
+    },
+    complexity: 'complex',
+    requiredLineType: 'Specialty'
+  }
+];
+
+const mockLineGroups: LineGroupCapacity[] = [
+  {
+    id: 'LG-001',
+    name: 'High Volume Lines',
+    factory: 'Factory A',
+    unit: 'Unit 1',
+    totalLines: 3,
+    activeLines: 3,
+    avgEfficiency: 78,
+    weeklyCapacity: 280000, // SAMs per week
+    shiftHours: 10,
+    operatorsPerLine: 45,
+    specialization: ['T-Shirts', 'Polos', 'Basic Shirts'],
+    dailyCapacity: 40000,
+    hourlyCapacity: 4000
   },
   {
-    id: 'UO-003',
-    orderCode: 'ORD-240116-003',
-    productCode: 'DJ-WM-DRS-003',
-    productType: 'Casual Dress',
-    customerCode: 'ZARA-INT',
-    orderDate: '2024-01-16',
-    deliveryDate: '2024-03-25',
-    quantity: 2000,
-    priority: 'high',
-    status: 'ready_to_schedule',
-    estimatedHours: 160,
-    complexity: 'complex',
-    requirements: ['Jersey Fabric', 'Zipper Installation', 'Pattern Matching'],
-    buyer: 'Zara International',
-    factory: 'Factory A',
-    samRange: '65-70 min'
+    id: 'LG-002',
+    name: 'Specialty Lines',
+    factory: 'Factory B',
+    unit: 'Unit 2',
+    totalLines: 2,
+    activeLines: 2,
+    avgEfficiency: 72,
+    weeklyCapacity: 180000,
+    shiftHours: 10,
+    operatorsPerLine: 40,
+    specialization: ['Shirts', 'Blouses', 'Custom Items'],
+    dailyCapacity: 25700,
+    hourlyCapacity: 2570
   },
+  {
+    id: 'LG-003',
+    name: 'Finishing Lines',
+    factory: 'Factory C',
+    unit: 'Unit 3',
+    totalLines: 2,
+    activeLines: 2,
+    avgEfficiency: 85,
+    weeklyCapacity: 220000,
+    shiftHours: 10,
+    operatorsPerLine: 35,
+    specialization: ['Jackets', 'Coats', 'Heavy Items'],
+    dailyCapacity: 31400,
+    hourlyCapacity: 3140
+  },
+  {
+    id: 'LG-004',
+    name: 'Assembly Lines',
+    factory: 'Factory A',
+    unit: 'Unit 1',
+    totalLines: 1,
+    activeLines: 1,
+    avgEfficiency: 80,
+    weeklyCapacity: 150000,
+    shiftHours: 10,
+    operatorsPerLine: 50,
+    specialization: ['Dresses', 'Suits', 'Complex Assembly'],
+    dailyCapacity: 21400,
+    hourlyCapacity: 2140  }
+];
+
+// Additional mock weekly orders with proper structure
+const mockAdditionalWeeklyOrders: WeeklyOrder[] = [
+  {
+    id: 'WO-001-EXT',
+    orderNo: 'ORD-2024-001-EXT',
+    styleNo: 'ST-001-BASIC',
+    buyer: 'Basic Apparel Co',
+    deliveryDate: '2024-08-01',
+    orderQty: 3000,
+    styleSAM: 22.5,
+    targetEfficiency: 75,
+    lineGroup: 'Basic Apparel',
+    unit: 'Unit-A',
+    bookingWeekStart: '2024-07-01',
+    bookingWeekEnd: '2024-07-21',
+    status: 'ready_to_plan',
+    taStatus: {
+      orderId: 'WO-001-EXT',
+      fabricApproval: 'approved',
+      trimApproval: 'approved',
+      ppMeeting: 'completed',
+      sampleApproval: 'approved',
+      overallStatus: 'ready',
+      estimatedReadyDate: '2024-06-25',
+      comments: 'All approvals completed.'
+    },
+    priority: 'high',
+    totalSAMs: 127500,
+    requiredWeeks: 3,
+    preProductionReady: true,
+    overbookingAlert: false,
+    color: '#10B981'
+  },  {
+    id: 'WO-002',
+    orderNo: 'ORD-2024-002',
+    styleNo: 'ST-002-TSHIRT',
+    buyer: 'Adidas',
+    deliveryDate: '2024-08-20',
+    orderQty: 8000,
+    styleSAM: 18.2,
+    targetEfficiency: 80,
+    lineGroup: 'Volume Production',
+    unit: 'Unit-B',
+    bookingWeekStart: '2024-07-08',
+    bookingWeekEnd: '2024-07-28',
+    status: 'pending_ta',
+    taStatus: {
+      orderId: 'WO-002',
+      fabricApproval: 'pending',
+      trimApproval: 'pending',
+      ppMeeting: 'scheduled',
+      sampleApproval: 'pending',
+      overallStatus: 'issues',
+      estimatedReadyDate: '2024-07-30',
+      comments: 'Trim approval in progress.'
+    },
+    priority: 'medium',
+    totalSAMs: 145600,
+    requiredWeeks: 2.5,
+    preProductionReady: false,
+    overbookingAlert: false,
+    color: '#F59E0B'
+  },  {
+    id: 'WO-003',
+    orderNo: 'ORD-2024-003',
+    styleNo: 'ST-003-JACKET',
+    buyer: 'Zara',
+    deliveryDate: '2024-09-05',
+    orderQty: 2500,
+    styleSAM: 45.8,
+    targetEfficiency: 70,
+    lineGroup: 'Premium Apparel',
+    unit: 'Unit-C',
+    bookingWeekStart: '2024-07-15',
+    bookingWeekEnd: '2024-08-12',
+    status: 'planned',
+    taStatus: {
+      orderId: 'WO-003',
+      fabricApproval: 'approved',
+      trimApproval: 'approved',
+      ppMeeting: 'completed',
+      sampleApproval: 'approved',
+      overallStatus: 'ready',
+      estimatedReadyDate: '2024-07-10',
+      comments: 'Production ready.'
+    },    priority: 'high',
+    totalSAMs: 114500,
+    requiredWeeks: 4,
+    preProductionReady: true,
+    overbookingAlert: false,
+    color: '#8B5CF6'
+  }
+];
+
+// Generate weekly capacity data
+const generateWeeklyCapacity = (): WeeklyCapacity[] => {
+  const capacityData: WeeklyCapacity[] = [];
+  const startDate = new Date('2024-07-01');
+  const weeks = eachWeekOfInterval({
+    start: startDate,
+    end: addWeeks(startDate, 12)
+  });
+
+  weeks.forEach(weekStart => {
+    const weekEnd = endOfWeek(weekStart);
+    const weekNumber = getWeek(weekStart);
+    const year = getYear(weekStart);
+
+    mockLineGroups.forEach(lineGroup => {
+      const allocatedSAMs = mockWeeklyOrders
+        .filter(order => 
+          order.lineGroup === lineGroup.name &&
+          order.bookingWeekStart <= format(weekStart, 'yyyy-MM-dd') &&
+          order.bookingWeekEnd >= format(weekStart, 'yyyy-MM-dd')
+        )
+        .reduce((sum, order) => sum + (order.totalSAMs / order.requiredWeeks), 0);
+
+      const utilizationPercent = (allocatedSAMs / lineGroup.weeklyCapacity) * 100;
+      
+      capacityData.push({
+        weekNumber,
+        year,
+        weekStart: format(weekStart, 'yyyy-MM-dd'),
+        weekEnd: format(weekEnd, 'yyyy-MM-dd'),
+        lineGroup: lineGroup.name,
+        factory: lineGroup.factory,
+        unit: lineGroup.unit,
+        totalCapacity: lineGroup.weeklyCapacity,
+        allocatedCapacity: allocatedSAMs,
+        availableCapacity: lineGroup.weeklyCapacity - allocatedSAMs,
+        utilizationPercent,        status: utilizationPercent > 100 ? 'overloaded' : 
+                utilizationPercent > 85 ? 'tight' : 'available',
+        bookedOrders: mockWeeklyOrders.filter(order => 
+          order.lineGroup === lineGroup.name &&
+          order.bookingWeekStart <= format(weekStart, 'yyyy-MM-dd') &&
+          order.bookingWeekEnd >= format(weekStart, 'yyyy-MM-dd')
+        ),
+        samCapacity: lineGroup.weeklyCapacity,
+        samUtilization: allocatedSAMs
+      });
+    });  });
+  return capacityData;
+};
+
+// Mock data for unscheduled orders - Additional orders for demonstration
+// (These orders are combined with the main mockUnscheduledOrders array)
+
+// Additional unscheduled orders with proper interface structure
+const mockUnscheduledOrdersExtended: UnscheduledOrder[] = [
   {
     id: 'UO-004',
-    orderCode: 'ORD-240116-004',
-    productCode: 'SW-MN-HDY-004',
-    productType: 'Hoodie',
-    customerCode: 'GAP-USA',
-    orderDate: '2024-01-16',
-    deliveryDate: '2024-04-10',
-    quantity: 4200,
-    priority: 'medium',
-    status: 'pending',
-    estimatedHours: 290,
-    complexity: 'complex',
-    requirements: ['Fleece Fabric', 'Hood Assembly', 'Kangaroo Pocket', 'Drawstring'],
-    buyer: 'Gap USA',
-    factory: 'Factory C',
-    samRange: '75-80 min'
+    orderNo: 'ORD-240117-004',
+    styleNo: 'DN-WM-SKT-004',
+    buyer: 'Levi Strauss',
+    deliveryDate: '2024-04-15',
+    orderQty: 1800,
+    styleSAM: 45.5,
+    totalSAMs: 81900,
+    estimatedWeeks: 2.1,
+    priority: 'low',
+    taStatus: {
+      orderId: 'UO-004',
+      fabricApproval: 'pending',
+      trimApproval: 'pending',
+      ppMeeting: 'pending',
+      sampleApproval: 'pending',
+      overallStatus: 'not_ready',
+      estimatedReadyDate: '2024-04-10',
+      comments: 'Awaiting material confirmation.'
+    },
+    complexity: 'medium',
+    requiredLineType: 'Denim Production'
   },
   {
     id: 'UO-005',
-    orderCode: 'ORD-240117-005',
-    productCode: 'JN-WM-SKT-005',
-    productType: 'Denim Skirt',
-    customerCode: 'LEVI-STR',
-    orderDate: '2024-01-17',
-    deliveryDate: '2024-04-15',
-    quantity: 1800,
-    priority: 'low',
-    status: 'requires_material',
-    estimatedHours: 125,
-    complexity: 'medium',
-    requirements: ['Denim Fabric', 'Button & Rivets', 'Contrast Stitching'],
-    buyer: 'Levi Strauss',
-    factory: 'Factory B',
-    samRange: '60-65 min'
+    orderNo: 'ORD-240117-005',
+    styleNo: 'SP-MN-SHT-005',
+    buyer: 'Adidas Sports',
+    deliveryDate: '2024-03-30',
+    orderQty: 6000,
+    styleSAM: 18.2,
+    totalSAMs: 109200,
+    estimatedWeeks: 1.8,
+    priority: 'high',
+    taStatus: {
+      orderId: 'UO-005',
+      fabricApproval: 'approved',
+      trimApproval: 'approved',
+      ppMeeting: 'completed',
+      sampleApproval: 'approved',
+      overallStatus: 'ready',
+      estimatedReadyDate: '2024-03-25',
+      comments: 'Ready for immediate scheduling.'
+    },
+    complexity: 'simple',
+    requiredLineType: 'Athletic Wear'
   },
   {
-    id: 'UO-006',
-    orderCode: 'ORD-240117-006',
-    productCode: 'SP-MN-SHT-006',
-    productType: 'Sports Shorts',
-    customerCode: 'ADID-SPT',
-    orderDate: '2024-01-17',
-    deliveryDate: '2024-03-30',
-    quantity: 6000,
-    priority: 'high',
-    status: 'ready_to_schedule',
-    estimatedHours: 180,
-    complexity: 'simple',
-    requirements: ['Moisture-Wicking Fabric', 'Elastic Waistband', 'Side Pockets'],
-    buyer: 'Adidas Sports',
-    factory: 'Factory A',
-    samRange: '35-40 min'
+    id: 'UO-006',    orderNo: 'ORD-240118-006',
+    styleNo: 'BL-WM-SHT-006',
+    buyer: 'Mango Fashion',
+    deliveryDate: '2024-04-20',
+    orderQty: 2800,
+    styleSAM: 52.5,
+    totalSAMs: 147000,
+    estimatedWeeks: 3.2,
+    priority: 'medium',
+    taStatus: {
+      orderId: 'UO-006',
+      fabricApproval: 'pending',
+      trimApproval: 'approved',
+      ppMeeting: 'scheduled',
+      sampleApproval: 'pending',
+      overallStatus: 'issues',
+      estimatedReadyDate: '2024-04-15',
+      comments: 'Awaiting fabric approval. Complex construction details.'
+    },
+    complexity: 'complex',
+    requiredLineType: 'Premium Apparel'
   },
   {
     id: 'UO-007',
-    orderCode: 'ORD-240118-007',
-    productCode: 'BL-WM-SHT-007',
-    productType: 'Blouse',
-    customerCode: 'MANG-FAH',
-    orderDate: '2024-01-18',
-    deliveryDate: '2024-04-20',
-    quantity: 2800,
-    priority: 'medium',
-    status: 'pending',
-    estimatedHours: 210,
-    complexity: 'complex',
-    requirements: ['Silk Fabric', 'Button-down Front', 'French Seams', 'Pleated Details'],
-    buyer: 'Mango Fashion',
-    factory: 'Factory C',
-    samRange: '70-75 min'
-  },
-  {
-    id: 'UO-008',
-    orderCode: 'ORD-240118-008',
-    productCode: 'CG-MN-PNT-008',
-    productType: 'Cargo Pants',
-    customerCode: 'UNIQ-CLO',
-    orderDate: '2024-01-18',
-    deliveryDate: '2024-04-25',
-    quantity: 3200,
-    priority: 'low',
-    status: 'requires_material',
-    estimatedHours: 245,
-    complexity: 'complex',
-    requirements: ['Canvas Fabric', 'Multiple Pockets', 'Reinforced Stitching', 'Belt Loops'],
+    orderNo: 'ORD-240118-007',
+    styleNo: 'CG-MN-PNT-007',
     buyer: 'Uniqlo Clothing',
-    factory: 'Factory B',
-    samRange: '80-85 min'
+    deliveryDate: '2024-04-25',
+    orderQty: 3200,
+    styleSAM: 58.8,
+    totalSAMs: 188160,
+    estimatedWeeks: 3.8,
+    priority: 'low',
+    taStatus: {
+      orderId: 'UO-007',
+      fabricApproval: 'pending',
+      trimApproval: 'pending',
+      ppMeeting: 'pending',
+      sampleApproval: 'pending',
+      overallStatus: 'not_ready',
+      estimatedReadyDate: '2024-04-22',
+      comments: 'Awaiting all T&A approvals. Complex multi-pocket design.'
+    },
+    complexity: 'complex',
+    requiredLineType: 'Casual Wear'
   }
 ];
+
+// Combine all unscheduled orders
+const allUnscheduledOrders = [...mockUnscheduledOrders, ...mockUnscheduledOrdersExtended];
 
 // Mock data for demonstration
 const mockStyleOrders: StyleOrder[] = [
@@ -495,18 +942,16 @@ export const HighLevelPlanningBoard = React.memo(({ className }: HighLevelPlanni
       return matchesBuyer && matchesFactory && matchesSearch;
     });
   }, [filterBuyer, filterFactory, searchTerm]);
-
   // Filter unscheduled orders based on current filters
   const filteredUnscheduledOrders = useMemo(() => {
-    return mockUnscheduledOrders.filter(order => {
+    return allUnscheduledOrders.filter(order => {
       const matchesBuyer = unscheduledFilterBuyer === 'all' || order.buyer === unscheduledFilterBuyer;
-      const matchesStatus = unscheduledFilterStatus === 'all' || order.status === unscheduledFilterStatus;
+      const matchesStatus = unscheduledFilterStatus === 'all' || order.taStatus.overallStatus === unscheduledFilterStatus;
       const matchesPriority = unscheduledFilterPriority === 'all' || order.priority === unscheduledFilterPriority;
       const matchesSearch = unscheduledSearchTerm === '' || 
-        order.orderCode.toLowerCase().includes(unscheduledSearchTerm.toLowerCase()) ||
-        order.productCode.toLowerCase().includes(unscheduledSearchTerm.toLowerCase()) ||
-        order.buyer.toLowerCase().includes(unscheduledSearchTerm.toLowerCase()) ||
-        order.customerCode.toLowerCase().includes(unscheduledSearchTerm.toLowerCase());
+        order.orderNo.toLowerCase().includes(unscheduledSearchTerm.toLowerCase()) ||
+        order.styleNo.toLowerCase().includes(unscheduledSearchTerm.toLowerCase()) ||
+        order.buyer.toLowerCase().includes(unscheduledSearchTerm.toLowerCase());
       
       return matchesBuyer && matchesStatus && matchesPriority && matchesSearch;
     });
@@ -514,7 +959,7 @@ export const HighLevelPlanningBoard = React.memo(({ className }: HighLevelPlanni
   // Get unique values for filters
   const uniqueBuyers = useMemo(() => [...new Set(mockStyleOrders.map(o => o.buyer))], []);
   const uniqueFactories = useMemo(() => [...new Set(mockStyleOrders.map(o => o.factory))], []);
-  const uniqueUnscheduledBuyers = useMemo(() => [...new Set(mockUnscheduledOrders.map(o => o.buyer))], []);
+  const uniqueUnscheduledBuyers = useMemo(() => [...new Set(allUnscheduledOrders.map(o => o.buyer))], []);
 
   // Filter lines based on selected planning board group
   const filteredLineCapacity = useMemo(() => {
@@ -549,12 +994,11 @@ export const HighLevelPlanningBoard = React.memo(({ className }: HighLevelPlanni
       default: return 'bg-gray-500 text-white';
     }
   };
-
   const getUnscheduledStatusColor = (status: string) => {
     switch (status) {
-      case 'ready_to_schedule': return 'bg-green-500 text-white';
-      case 'requires_material': return 'bg-yellow-500 text-black';
-      case 'pending': return 'bg-blue-500 text-white';
+      case 'ready': return 'bg-green-500 text-white';
+      case 'issues': return 'bg-yellow-500 text-black';
+      case 'not_ready': return 'bg-red-500 text-white';
       default: return 'bg-gray-500 text-white';
     }
   };
@@ -680,7 +1124,7 @@ export const HighLevelPlanningBoard = React.memo(({ className }: HighLevelPlanni
 
     const summaryText = Object.entries(factoryGroups).map(([factory, items]) => {
       return `${factory}:\n${items.map(item => 
-        `  • ${item.order!.orderCode} → ${item.line!.lineName} (${item.line!.lineType})`
+        `  • ${item.order!.orderNo} → ${item.line!.lineName} (${item.line!.lineType})`
       ).join('\n')}`;
     }).join('\n\n');
 
@@ -717,68 +1161,70 @@ export const HighLevelPlanningBoard = React.memo(({ className }: HighLevelPlanni
     
     return grouped;
   }, []);
-
   // Individual order actions
   const handleViewOrder = (order: UnscheduledOrder) => {
     const orderDetails = `
-📋 Order Details: ${order.orderCode}
+📋 Order Details: ${order.orderNo}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🏷️ Product Information:
-• Product Code: ${order.productCode}
-• Product Type: ${order.productType}
-• Customer: ${order.customerCode} (${order.buyer})
+• Style Code: ${order.styleNo}
+• Line Type: ${order.requiredLineType}
+• Customer: ${order.buyer}
 
 📊 Production Details:
-• Quantity: ${order.quantity.toLocaleString()} pieces
-• Estimated Hours: ${order.estimatedHours}h
-• SAM Range: ${order.samRange}
+• Quantity: ${order.orderQty.toLocaleString()} pieces
+• Style SAM: ${order.styleSAM}
+• Total SAMs: ${order.totalSAMs.toLocaleString()}
 • Complexity: ${order.complexity.toUpperCase()}
-• Factory: ${order.factory}
+• Estimated Weeks: ${order.estimatedWeeks}
 
 📅 Timeline:
-• Order Date: ${format(new Date(order.orderDate), 'MMM dd, yyyy')}
 • Delivery Date: ${format(new Date(order.deliveryDate), 'MMM dd, yyyy')}
 • Days Remaining: ${Math.ceil((new Date(order.deliveryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
 
 🎯 Status & Priority:
 • Priority: ${order.priority.toUpperCase()}
-• Status: ${order.status.replace('_', ' ').toUpperCase()}
+• T&A Status: ${order.taStatus.overallStatus.replace('_', ' ').toUpperCase()}
 
-📋 Requirements:
-${order.requirements.map(req => `• ${req}`).join('\n')}
+📋 T&A Details:
+• Fabric Approval: ${order.taStatus.fabricApproval.toUpperCase()}
+• Trim Approval: ${order.taStatus.trimApproval.toUpperCase()}
+• PP Meeting: ${order.taStatus.ppMeeting.toUpperCase()}
+• Sample Approval: ${order.taStatus.sampleApproval.toUpperCase()}
+
+💬 Comments: ${order.taStatus.comments}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `;
     alert(orderDetails);
   };
-
   const handleScheduleOrder = (order: UnscheduledOrder) => {
     // Check if order can be scheduled
-    if (order.status === 'requires_material') {
-      alert(`❌ Cannot Schedule Order\n\nOrder ${order.orderCode} requires materials before scheduling.\n\nPlease ensure all materials are available and update the status.`);
+    if (order.taStatus.overallStatus === 'not_ready') {
+      alert(`❌ Cannot Schedule Order\n\nOrder ${order.orderNo} is not ready for scheduling.\n\nT&A Status: ${order.taStatus.comments}\n\nPlease complete all T&A requirements.`);
       return;
     }
 
-    if (order.status === 'pending') {
-      alert(`⚠️ Order Pending Review\n\nOrder ${order.orderCode} is still pending review.\n\nPlease complete the review process before scheduling.`);
+    if (order.taStatus.overallStatus === 'issues') {
+      alert(`⚠️ Order Has Issues\n\nOrder ${order.orderNo} has pending T&A issues.\n\nIssues: ${order.taStatus.comments}\n\nPlease resolve issues before scheduling.`);
       return;
     }
 
     const scheduleDetails = `
-🗓️ Schedule Order: ${order.orderCode}
+🗓️ Schedule Order: ${order.orderNo}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📋 Order: ${order.orderCode}
-🏷️ Product: ${order.productType}
+📋 Order: ${order.orderNo}
+🏷️ Style: ${order.styleNo}
 👥 Customer: ${order.buyer}
-📊 Quantity: ${order.quantity.toLocaleString()} pieces
-⏱️ Estimated Time: ${order.estimatedHours} hours
+📊 Quantity: ${order.orderQty.toLocaleString()} pieces
+⏱️ Estimated Weeks: ${order.estimatedWeeks}
 📅 Delivery: ${format(new Date(order.deliveryDate), 'MMM dd, yyyy')}
 🔥 Priority: ${order.priority.toUpperCase()}
 
 This order will be:
 ✓ Added to production timeline
-✓ Allocated to ${order.factory}
+✓ Allocated to ${order.requiredLineType} lines
 ✓ Assigned production capacity
 ✓ Tracked with milestones
 
@@ -788,7 +1234,7 @@ Continue with scheduling?
 
     const confirmed = confirm(scheduleDetails);
     if (confirmed) {
-      alert(`✅ Order Scheduled Successfully!\n\nOrder ${order.orderCode} has been scheduled for production.\n\n📅 Next Steps:\n1. Production line assignment\n2. Material allocation\n3. Operator scheduling\n4. Quality setup\n\n➡️ Order is now visible in Timeline tab.`);
+      alert(`✅ Order Scheduled Successfully!\n\nOrder ${order.orderNo} has been scheduled for production.\n\n📅 Next Steps:\n1. Production line assignment\n2. Material allocation\n3. Operator scheduling\n4. Quality setup\n\n➡️ Order is now visible in Timeline tab.`);
     }
   };
 
@@ -884,15 +1330,14 @@ Ready to proceed?
     }
 
     alert(`📊 Export Complete!\n\nExported ${filteredUnscheduledOrders.length} unscheduled orders.\n\n📄 Data includes:\n• Order details and codes\n• Customer information\n• Production specifications\n• Timeline and requirements\n\n💡 Check browser console for data preview.`);
-    
-    // Log to console for demonstration
+      // Log to console for demonstration
     console.table(filteredUnscheduledOrders.map(order => ({
-      OrderCode: order.orderCode,
-      ProductType: order.productType,
+      OrderNo: order.orderNo,
+      StyleNo: order.styleNo,
       Customer: order.buyer,
-      Quantity: order.quantity,
+      Quantity: order.orderQty,
       Priority: order.priority,
-      Status: order.status,
+      TAStatus: order.taStatus.overallStatus,
       DeliveryDate: order.deliveryDate
     })));
   };
@@ -911,10 +1356,10 @@ Ready to proceed?
 ✅ Refresh Complete!
 
 📊 Current Status:
-• Total Orders: ${mockUnscheduledOrders.length}
-• Ready to Schedule: ${mockUnscheduledOrders.filter(o => o.status === 'ready_to_schedule').length}
-• Requires Material: ${mockUnscheduledOrders.filter(o => o.status === 'requires_material').length}
-• Pending Review: ${mockUnscheduledOrders.filter(o => o.status === 'pending').length}
+• Total Orders: ${allUnscheduledOrders.length}
+• Ready to Schedule: ${allUnscheduledOrders.filter(o => o.taStatus.overallStatus === 'ready').length}
+• Has Issues: ${allUnscheduledOrders.filter(o => o.taStatus.overallStatus === 'issues').length}
+• Not Ready: ${allUnscheduledOrders.filter(o => o.taStatus.overallStatus === 'not_ready').length}
 
 🕐 Last Updated: ${new Date().toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1111,9 +1556,10 @@ Ready to proceed?
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>        {/* Line Capacity Heatmap Tab */}
+            </CardContent>          </Card>
+        </TabsContent>
+        
+        {/* Line Capacity Heatmap Tab */}
         <TabsContent value="capacity" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1429,12 +1875,11 @@ Ready to proceed?
                   <Select value={unscheduledFilterStatus} onValueChange={setUnscheduledFilterStatus}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
+                    </SelectTrigger>                    <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="ready_to_schedule">Ready to Schedule</SelectItem>
-                      <SelectItem value="requires_material">Requires Material</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="ready">Ready</SelectItem>
+                      <SelectItem value="issues">Has Issues</SelectItem>
+                      <SelectItem value="not_ready">Not Ready</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1530,33 +1975,31 @@ Ready to proceed?
                             onChange={() => handleOrderSelect(order.id)}
                             className="mt-1"
                           />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-sm">{order.orderCode}</h4>
+                          <div className="flex-1">                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold text-sm">{order.orderNo}</h4>
                               <Badge className={getPriorityColor(order.priority)}>
                                 {order.priority.toUpperCase()}
                               </Badge>
-                              <Badge className={getUnscheduledStatusColor(order.status)}>
-                                {order.status.replace('_', ' ').toUpperCase()}
+                              <Badge className={getUnscheduledStatusColor(order.taStatus.overallStatus)}>
+                                {order.taStatus.overallStatus.replace('_', ' ').toUpperCase()}
                               </Badge>
                             </div>
                             
                             {/* Order Details Grid */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                               <div>
-                                <span className="text-muted-foreground">Product:</span>
-                                <div className="font-medium">{order.productCode}</div>
-                                <div className="text-xs text-muted-foreground">{order.productType}</div>
+                                <span className="text-muted-foreground">Style:</span>
+                                <div className="font-medium">{order.styleNo}</div>
+                                <div className="text-xs text-muted-foreground">{order.requiredLineType}</div>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Customer:</span>
-                                <div className="font-medium">{order.customerCode}</div>
-                                <div className="text-xs text-muted-foreground">{order.buyer}</div>
+                                <div className="font-medium">{order.buyer}</div>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Quantity:</span>
-                                <div className="font-medium">{order.quantity.toLocaleString()} pcs</div>
-                                <div className="text-xs text-muted-foreground">{order.estimatedHours}h est.</div>
+                                <div className="font-medium">{order.orderQty.toLocaleString()} pcs</div>
+                                <div className="text-xs text-muted-foreground">{order.estimatedWeeks}w est.</div>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Delivery:</span>
@@ -1571,7 +2014,7 @@ Ready to proceed?
                             <div className="flex items-center gap-4 mt-3">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">SAM:</span>
-                                <Badge variant="outline" className="text-xs">{order.samRange}</Badge>
+                                <Badge variant="outline" className="text-xs">{order.styleSAM}</Badge>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">Complexity:</span>
@@ -1580,20 +2023,24 @@ Ready to proceed?
                                 </Badge>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">Factory:</span>
-                                <span className="text-xs font-medium">{order.factory}</span>
+                                <span className="text-xs text-muted-foreground">Total SAMs:</span>
+                                <span className="text-xs font-medium">{order.totalSAMs.toLocaleString()}</span>
                               </div>
                             </div>
 
-                            {/* Requirements */}
+                            {/* T&A Status */}
                             <div className="mt-3">
-                              <span className="text-xs text-muted-foreground">Requirements:</span>
+                              <span className="text-xs text-muted-foreground">T&A Status:</span>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {order.requirements.map((req, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">
-                                    {req}
-                                  </Badge>
-                                ))}
+                                <Badge variant={order.taStatus.fabricApproval === 'approved' ? 'default' : 'secondary'} className="text-xs">
+                                  Fabric: {order.taStatus.fabricApproval}
+                                </Badge>
+                                <Badge variant={order.taStatus.trimApproval === 'approved' ? 'default' : 'secondary'} className="text-xs">
+                                  Trim: {order.taStatus.trimApproval}
+                                </Badge>
+                                <Badge variant={order.taStatus.sampleApproval === 'approved' ? 'default' : 'secondary'} className="text-xs">
+                                  Sample: {order.taStatus.sampleApproval}
+                                </Badge>
                               </div>
                             </div>
                           </div>
@@ -1624,9 +2071,10 @@ Ready to proceed?
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-      </Tabs>      {/* Bulk Schedule Dialog */}
+          </div>        </TabsContent>
+      </Tabs>
+      
+      {/* Bulk Schedule Dialog */}
       <Dialog open={showBulkScheduleDialog} onOpenChange={setShowBulkScheduleDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] p-6 overflow-y-auto">
           <DialogHeader>
@@ -1641,11 +2089,10 @@ Ready to proceed?
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* Left: Selected Orders */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Selected Orders</h3>
+              <div className="space-y-4">                <h3 className="text-lg font-medium">Selected Orders</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {selectedOrders.map(orderId => {
-                    const order = mockUnscheduledOrders.find(o => o.id === orderId);
+                    const order = allUnscheduledOrders.find(o => o.id === orderId);
                     const selectedLineId = orderLineAllocations[orderId];
                     const selectedLine = selectedLineId ? mockLineCapacity.find(l => l.lineId === selectedLineId) : null;
                     
@@ -1653,19 +2100,18 @@ Ready to proceed?
                       <div key={orderId} className="border rounded-lg p-4 space-y-3">
                         {/* Order Details */}
                         <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-1">                            <div className="flex items-center gap-2">
                               <Badge className={getPriorityColor(order!.priority)}>
                                 {order!.priority.toUpperCase()}
                               </Badge>
-                              <span className="font-medium">{order!.orderCode}</span>
+                              <span className="font-medium">{order!.orderNo}</span>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {order!.productType} • {order!.buyer}
+                              {order!.styleNo} • {order!.buyer}
                             </div>
                             <div className="text-sm">
-                              <span className="font-medium">{order!.quantity.toLocaleString()}</span> pieces
-                              <span className="text-muted-foreground"> • {order!.estimatedHours}h • {order!.samRange}</span>
+                              <span className="font-medium">{order!.orderQty.toLocaleString()}</span> pieces
+                              <span className="text-muted-foreground"> • {order!.estimatedWeeks}w • {order!.styleSAM} SAM</span>
                             </div>
                           </div>
                         </div>
@@ -1798,13 +2244,12 @@ Ready to proceed?
                     return (
                       <div key={factory} className="border rounded-lg p-3">
                         <h4 className="font-medium mb-2">{factory}</h4>
-                        <div className="space-y-1 text-sm">
-                          {factoryAllocations.map(([orderId, lineId]) => {
-                            const order = mockUnscheduledOrders.find(o => o.id === orderId);
+                        <div className="space-y-1 text-sm">                          {factoryAllocations.map(([orderId, lineId]) => {
+                            const order = allUnscheduledOrders.find(o => o.id === orderId);
                             const line = mockLineCapacity.find(l => l.lineId === lineId);
                             return (
                               <div key={orderId} className="flex justify-between">
-                                <span className="truncate">{order?.orderCode}</span>
+                                <span className="truncate">{order?.orderNo}</span>
                                 <span className="text-muted-foreground text-xs">{line?.lineName}</span>
                               </div>
                             );
@@ -1831,8 +2276,7 @@ Ready to proceed?
                 ? `Assign All Lines (${selectedOrders.filter(orderId => !orderLineAllocations[orderId]).length} remaining)`
                 : 'Confirm Schedule'
               }
-            </Button>
-          </DialogFooter>
+            </Button>          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
