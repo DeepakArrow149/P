@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRenderPerformance } from '@/lib/performance-monitor';
 import { PageHeader } from '@/components/page-header';
 import { TimelineToolbar } from '@/components/plan-view/timeline-toolbar';
 import TimelineGrid from '@/components/plan-view/timeline-grid';
@@ -184,6 +185,9 @@ const mockSubProcessOrders: SubProcessOrder[] = [
 ];
 
 export default function PlanViewPage() {
+  // Performance monitoring for this large component
+  useRenderPerformance('PlanViewPage');
+  
   const { toast } = useToast();
   
   // API hooks for real data

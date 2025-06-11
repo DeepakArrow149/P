@@ -431,7 +431,7 @@ interface HighLevelPlanningBoardProps {
   className?: string;
 }
 
-export function HighLevelPlanningBoard({ className }: HighLevelPlanningBoardProps) {
+export const HighLevelPlanningBoard = React.memo(({ className }: HighLevelPlanningBoardProps) => {
   const [selectedWeek, setSelectedWeek] = useState(new Date());
   const [filterBuyer, setFilterBuyer] = useState('all');
   const [filterFactory, setFilterFactory] = useState('all');
@@ -1837,6 +1837,8 @@ Ready to proceed?
       </Dialog>
     </div>
   );
-}
+});
+
+HighLevelPlanningBoard.displayName = 'HighLevelPlanningBoard';
 
 export default HighLevelPlanningBoard;

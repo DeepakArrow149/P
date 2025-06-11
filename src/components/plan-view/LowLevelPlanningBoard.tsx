@@ -189,7 +189,7 @@ interface LowLevelPlanningBoardProps {
   className?: string;
 }
 
-export function LowLevelPlanningBoard({ className }: LowLevelPlanningBoardProps) {
+export const LowLevelPlanningBoard = React.memo(({ className }: LowLevelPlanningBoardProps) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedShift, setSelectedShift] = useState('all');
   const [selectedLine, setSelectedLine] = useState('all');
@@ -629,9 +629,10 @@ export function LowLevelPlanningBoard({ className }: LowLevelPlanningBoardProps)
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+          </div>        </TabsContent>
       </Tabs>
     </div>
   );
-}
+});
+
+LowLevelPlanningBoard.displayName = 'LowLevelPlanningBoard';
